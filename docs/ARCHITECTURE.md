@@ -17,8 +17,8 @@
 - **AI 싱글플레이**: Godot가 서버 WS 통신을 차단하고 내장 C++ AI 모듈 호출 -> 서버 비용 없이 단독 구동
 
 ## 진행 단계 (Phase)
-- **Phase 1 (현재)**: 로컬 자유오목 2인 대전 (core + frontend, 서버/로그인/AI 없음)
-- **Phase 2**: FastAPI + WebSocket 실시간 2인 대전 (사설 방 URL 방식부터)
+- **Phase 1**: 로컬 자유오목 2인 대전 (core + frontend, 서버/로그인/AI 없음) — 완료
+- **Phase 2 (현재)**: FastAPI + WebSocket 실시간 2인 대전 (사설 방 코드 방식, 서버 권위 보드, 30초 턴)
 - **Phase 3**: Google OAuth, PostgreSQL, Redis, 랭크 매칭
 - **Phase 4**: Docker/Nginx 배포, AI 싱글플레이
 - **Phase 5+**: 오목 외 다른 보드게임 추가

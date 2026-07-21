@@ -1,36 +1,52 @@
 ﻿# The Genius Game
 
-종합 웹 보드게임 플랫폼. 전체 설계는 `docs/ARCHITECTURE.md` 참고.
+종합 웹 보드게임 플랫폼. 설계는 `docs/ARCHITECTURE.md`, 현황은 `OVERVIEW.md`.
 
-## Phase 1 (완료)
-로컬 자유오목 2인 대전: C++ 코어 + Godot 4 UI + GDExtension 연결 + 승리 팝업.
+## Phase 2 (현재)
+
+사설 방 코드 기반 FastAPI + WebSocket 온라인 오목 대전.
+
+### 서버
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+자세한 API는 `backend/README.md`.
+
+### Godot
+
+1. `frontend/gomoku` 프로젝트를 Godot 4.7+로 연다.
+2. GDExtension DLL이 빌드되어 있어야 한다 (`core/gomoku_gdext` scons).
+3. 실행 → 로비에서 **로컬 2인** 또는 **온라인 방 만들기/참가**.
 
 ## 폴더 구조
-```
-core/gomoku/         # 순수 C++ 오목 로직 + 콘솔 테스트
-core/gomoku_gdext/   # Godot GDExtension 래퍼 + SCons 빌드
-frontend/gomoku/     # Godot 4 프로젝트
-backend/             # Phase 2 (FastAPI)
-infra/               # Phase 3 (Docker/Nginx)
-docs/                # 아키텍처 문서
-```
 
-## Godot에서 실행하기
-1. Godot **4.7.x**로 `frontend/gomoku` 열기
-2. GDExtension `.dll`이 없으면 아래 빌드 후 에디터 재시작
-3. F5로 실행
+```
+core/gomoku/          # C++ 오목 로직
+core/gomoku_gdext/    # Godot GDExtension 바인딩
+frontend/gomoku/      # Godot 4 UI
+backend/              # FastAPI (Phase 2)
+infra/                # Docker/Nginx (Phase 3+)
+docs/                 # 설계 문서
+```
 
 ## GDExtension 빌드 (Windows)
+
 ```powershell
-# 최초 1회: godot-cpp
+# 1회: godot-cpp
 git clone --depth 1 --branch master https://github.com/godotengine/godot-cpp.git core/godot-cpp
 
-cd core\gomoku_gdext
+cd core/gomoku_gdext
 scons platform=windows target=template_debug
 ```
-Godot 버전이 4.6이면 `api_version=4.6`을 붙이세요. (4.7이면 기본값으로 맞음)
 
-## C++ 로직만 테스트
+## C++ 로직 테스트
+
 ```powershell
 g++ -std=c++17 core/gomoku/gomoku_board.cpp core/gomoku/tests/test_gomoku_board.cpp -o test_gomoku.exe
 .\test_gomoku.exe

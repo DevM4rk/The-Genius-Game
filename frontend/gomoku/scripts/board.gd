@@ -1,48 +1,116 @@
 # board.gd
-# 순서 요약:
-# 1) _ready: GomokuBoardExt(C++ 로직) 생성, 셀 크기 계산, 보드 중앙 배치, 승리 팝업 UI 생성(숨김)
-# 2) _draw: 15x15 격자 + 놓인 돌 그리기 (돌 상태는 logic.get_stone()에서 읽어옴)
-# 3) _input: 마우스 클릭 → 픽셀을 (x,y)로 변환 → logic.place_stone() 호출 → 결과로 승패/반칙 판단
-#    → 게임이 끝나면 팝업 표시
-# 4) _on_restart_pressed: 팝업의 "다시 시작" 버튼 → logic.reset() 후 팝업 숨기고 다시 그림
-# ※ 실제 오목 규칙(승패 판정 등)은 전부 C++(GomokuBoard)에 있고, 여긴 화면/입력만 담당함.
+# 로컬: 클릭 → C++ place_stone (기존 Phase 1)
+# 온라인: 클릭 → 서버 place 요청 → move/game_start 메시지에 맞춰 로컬 보드 동기화
 
 extends Node2D
 
 const BOARD_SIZE := 15
-const BOARD_PIXEL := 600.0  # 보드 한 변 픽셀 크기
+const BOARD_PIXEL := 600.0
+const NetworkClientScript := preload("res://scripts/network_client.gd")
 
-var logic: GomokuBoardExt  # C++ GDExtension 인스턴스 (실제 보드 상태 + 판정 로직)
+var logic: GomokuBoardExt
 var cell_size: float = 0.0
-var board_origin: Vector2 = Vector2.ZERO  # 보드 왼쪽 위 모서리 (화면 좌표)
+var board_origin: Vector2 = Vector2.ZERO
 
-# 승리 팝업용 UI 노드들 (코드로 생성, board.tscn을 직접 안 건드려도 되게)
 var result_layer: CanvasLayer
 var result_panel: Panel
 var result_label: Label
+var restart_button: Button
+
+var status_label: Label
+var back_button: Button
+var room_label: Label
+
+var net: Node = null  # network_client.gd
+var online: bool = false
+var my_color: int = -1
+var input_locked: bool = false
+var turn_deadline_msec: int = -1
+
 
 func _ready() -> void:
-	# 1) C++ 오목 로직 인스턴스 생성 (여기서부터가 GDExtension 연결 지점)
 	logic = GomokuBoardExt.new()
-
-	# 2) 셀 크기 = 보드픽셀 / (칸 수 - 1)  ← 오목은 "교차점"에 돌을 둠
 	cell_size = BOARD_PIXEL / float(BOARD_SIZE - 1)
 
-	# 3) 화면 중앙에 보드가 오도록 origin 계산
 	var viewport_size := get_viewport_rect().size
 	board_origin = Vector2(
 		(viewport_size.x - BOARD_PIXEL) * 0.5,
 		(viewport_size.y - BOARD_PIXEL) * 0.5
 	)
 
-	# 4) 승리/무승부 팝업 UI를 미리 만들어두고 숨겨둠 (게임 끝날 때만 보여줄 것)
+	_create_hud()
 	_create_result_popup()
+
+	online = GameSession.mode == GameSession.Mode.ONLINE or GameSession.mode == GameSession.Mode.QUICK
+	if online:
+		if GameSession.mode == GameSession.Mode.QUICK:
+			room_label.text = "빠른 대전 매칭 중…"
+		else:
+			room_label.text = "방: %s" % GameSession.room_id
+		status_label.text = "서버 연결 중…"
+		input_locked = true
+		restart_button.text = "재경기 요청"
+		_start_network()
+	else:
+		room_label.text = "로컬 대전"
+		status_label.text = "흑 차례"
+		restart_button.text = "다시 시작"
 
 	queue_redraw()
 
 
-# CanvasLayer(화면 고정 레이어) 위에 패널+텍스트+재시작 버튼을 코드로 생성.
-# 카메라/보드 좌표와 상관없이 항상 화면 정중앙에 뜨게 하려고 CanvasLayer를 씀.
+func _process(_delta: float) -> void:
+	if not online or turn_deadline_msec < 0:
+		return
+	if logic.get_state() != GomokuBoardExt.STATE_PLAYING:
+		return
+	var left := maxi(0, int(ceil((turn_deadline_msec - Time.get_ticks_msec()) / 1000.0)))
+	var turn_txt := _turn_text()
+	status_label.text = "%s · 남은 시간 %d초" % [turn_txt, left]
+
+
+func _start_network() -> void:
+	net = NetworkClientScript.new()
+	add_child(net)
+	net.message.connect(_on_net_message)
+	net.disconnected.connect(_on_net_disconnected)
+	net.connected.connect(func() -> void:
+		status_label.text = "연결됨 — 상대 대기 중…"
+	)
+	var url := GameSession.quick_ws_url() if GameSession.mode == GameSession.Mode.QUICK else GameSession.ws_url()
+	net.connect_to_room(url)
+
+
+func _create_hud() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+
+	var top := HBoxContainer.new()
+	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	top.offset_left = 16
+	top.offset_right = -16
+	top.offset_top = 12
+	top.offset_bottom = 48
+	top.add_theme_constant_override("separation", 12)
+	layer.add_child(top)
+
+	back_button = Button.new()
+	back_button.text = "← 로비"
+	back_button.pressed.connect(_on_back_pressed)
+	top.add_child(back_button)
+
+	room_label = Label.new()
+	room_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	room_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(room_label)
+
+	status_label = Label.new()
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.custom_minimum_size = Vector2(280, 0)
+	top.add_child(status_label)
+
+
 func _create_result_popup() -> void:
 	result_layer = CanvasLayer.new()
 	add_child(result_layer)
@@ -50,8 +118,6 @@ func _create_result_popup() -> void:
 	result_panel = Panel.new()
 	result_panel.custom_minimum_size = Vector2(280, 160)
 	result_layer.add_child(result_panel)
-	# 자식(라벨/버튼) 추가 후에 anchors_and_offsets_preset을 호출해야
-	# custom_minimum_size 기준으로 정확히 중앙 정렬됨
 	result_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
 	var vbox := VBoxContainer.new()
@@ -65,7 +131,7 @@ func _create_result_popup() -> void:
 	result_label.add_theme_font_size_override("font_size", 28)
 	vbox.add_child(result_label)
 
-	var restart_button := Button.new()
+	restart_button = Button.new()
 	restart_button.text = "다시 시작"
 	restart_button.pressed.connect(_on_restart_pressed)
 	vbox.add_child(restart_button)
@@ -73,7 +139,6 @@ func _create_result_popup() -> void:
 	result_layer.hide()
 
 
-# 게임 상태(state)에 맞는 문구로 팝업을 보여줌
 func _show_result_popup(state: int) -> void:
 	match state:
 		GomokuBoardExt.STATE_BLACK_WIN:
@@ -83,40 +148,46 @@ func _show_result_popup(state: int) -> void:
 		GomokuBoardExt.STATE_DRAW:
 			result_label.text = "DRAW!"
 		_:
-			return  # PLAYING이면 보여줄 게 없음
-
+			return
 	result_layer.show()
 
 
 func _on_restart_pressed() -> void:
+	if online:
+		if net:
+			net.send_restart()
+		return
 	logic.reset()
 	result_layer.hide()
+	status_label.text = "흑 차례"
 	queue_redraw()
 
 
-func _draw() -> void:
-	# --- 보드 배경 ---
-	var bg := Rect2(board_origin, Vector2(BOARD_PIXEL, BOARD_PIXEL))
-	draw_rect(bg, Color(0.86, 0.70, 0.45))  # 나무색
+func _on_back_pressed() -> void:
+	if net:
+		net.disconnect_from_room()
+	GameSession.reset_to_local()
+	get_tree().change_scene_to_file("res://lobby.tscn")
 
-	# --- 격자선 (가로/세로 각 15줄) ---
+
+func _draw() -> void:
+	var bg := Rect2(board_origin, Vector2(BOARD_PIXEL, BOARD_PIXEL))
+	draw_rect(bg, Color(0.86, 0.70, 0.45))
+
 	var line_color := Color(0.15, 0.10, 0.05)
 	for i in BOARD_SIZE:
 		var offset := i * cell_size
-		# 세로선
 		draw_line(
 			board_origin + Vector2(offset, 0),
 			board_origin + Vector2(offset, BOARD_PIXEL),
 			line_color, 1.5
 		)
-		# 가로선
 		draw_line(
 			board_origin + Vector2(0, offset),
 			board_origin + Vector2(BOARD_PIXEL, offset),
 			line_color, 1.5
 		)
 
-	# --- 돌 그리기 (C++ 쪽 상태를 그대로 읽어서 그림) ---
 	var stone_radius := cell_size * 0.42
 	for y in BOARD_SIZE:
 		for x in BOARD_SIZE:
@@ -126,65 +197,216 @@ func _draw() -> void:
 			var center := _grid_to_pixel(x, y)
 			var color := Color.BLACK if stone == GomokuBoardExt.STONE_BLACK else Color.WHITE
 			draw_circle(center, stone_radius, color)
-			# 흰돌은 테두리 없으면 배경에 묻히니까 얇은 테두리
 			if stone == GomokuBoardExt.STONE_WHITE:
 				draw_arc(center, stone_radius, 0, TAU, 32, Color.BLACK, 1.5)
 
 
 func _input(event: InputEvent) -> void:
-	# 왼쪽 클릭만 처리
+	if input_locked:
+		return
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if logic.get_state() != GomokuBoardExt.STATE_PLAYING:
 		return
 
 	var grid := _pixel_to_grid(event.position)
 	if grid.x < 0:
-		return  # 보드 밖 클릭
+		return
 
 	var x := int(grid.x)
 	var y := int(grid.y)
 
-	# place_stone() 호출 전에 "지금 누구 차례인지" 먼저 저장해둠.
-	# (place_stone() 이후에 current_turn을 보고 유추하면 승리로 게임이 끝났을 때
-	#  턴이 안 넘어가는 경우와 헷갈리게 되므로, 호출 전 값을 그대로 쓰는 게 안전함)
-	var just_placed := logic.get_current_turn()
+	if online:
+		if my_color < 0:
+			return
+		if logic.get_current_turn() != my_color:
+			status_label.text = "상대 차례입니다"
+			return
+		net.send_place(x, y)
+		return
 
+	var just_placed := logic.get_current_turn()
 	var result: int = logic.place_stone(x, y)
 	match result:
 		GomokuBoardExt.MOVE_CELL_OCCUPIED:
-			print("occupied: (", x, ", ", y, ")")
 			return
 		GomokuBoardExt.MOVE_GAME_ALREADY_OVER:
-			print("game already over")
 			return
 		GomokuBoardExt.MOVE_OUT_OF_BOUNDS:
-			return  # 이론상 grid 체크에서 이미 걸러지므로 여긴 오지 않음
+			return
 
 	print("place ", ("BLACK" if just_placed == GomokuBoardExt.STONE_BLACK else "WHITE"), " at (", x, ", ", y, ")")
-
-	# 승패/무승부면 팝업 표시 (PLAYING이면 _show_result_popup 안에서 그냥 무시됨)
 	_show_result_popup(logic.get_state())
-
+	status_label.text = _turn_text() if logic.get_state() == GomokuBoardExt.STATE_PLAYING else status_label.text
 	queue_redraw()
 
 
-# 교차점 좌표 (x,y) → 화면 픽셀
+func _on_net_message(data: Dictionary) -> void:
+	var t: String = str(data.get("type", ""))
+	match t:
+		"queued":
+			status_label.text = "상대를 찾는 중…"
+			input_locked = true
+		"matched":
+			GameSession.room_id = str(data.get("room_id", ""))
+			room_label.text = "방: %s" % GameSession.room_id
+			status_label.text = "매칭 완료! 입장 중…"
+		"joined":
+			my_color = _color_from_name(str(data.get("color", "")))
+			GameSession.my_color = my_color
+			_apply_board_snapshot(data.get("board", []))
+			status_label.text = "당신은 %s · 상대 대기 중…" % _color_label(my_color)
+			input_locked = true
+		"waiting":
+			status_label.text = "상대 입장 대기 중… (방 코드: %s)" % GameSession.room_id
+			input_locked = true
+		"game_start":
+			if data.has("your_color"):
+				my_color = _color_from_name(str(data["your_color"]))
+				GameSession.my_color = my_color
+			logic.reset()
+			_apply_board_snapshot(data.get("board", []))
+			result_layer.hide()
+			input_locked = false
+			_set_turn_timer(data.get("turn_seconds", 30))
+			status_label.text = "게임 시작! 당신은 %s" % _color_label(my_color)
+			queue_redraw()
+		"move":
+			_apply_server_move(data)
+		"timeout":
+			_apply_board_snapshot(data.get("board", []))
+			_sync_state_name(str(data.get("state", "")))
+			turn_deadline_msec = -1
+			input_locked = true
+			status_label.text = "시간 초과 — %s" % str(data.get("loser", ""))
+			_show_result_popup(logic.get_state())
+			queue_redraw()
+		"opponent_left":
+			input_locked = true
+			turn_deadline_msec = -1
+			status_label.text = "상대가 나갔습니다. 새 상대를 기다리거나 로비로 돌아가세요."
+		"error":
+			status_label.text = "오류: %s" % str(data.get("message", ""))
+		"pong":
+			pass
+		_:
+			print("WS unhandled: ", data)
+
+
+func _on_net_disconnected() -> void:
+	input_locked = true
+	turn_deadline_msec = -1
+	status_label.text = "서버 연결이 끊겼습니다."
+
+
+func _apply_server_move(data: Dictionary) -> void:
+	var x := int(data.get("x", -1))
+	var y := int(data.get("y", -1))
+	var result: int = logic.place_stone(x, y)
+	if result != GomokuBoardExt.MOVE_OK:
+		# 로컬이 어긋났으면 스냅샷으로 강제 동기화
+		logic.reset()
+		_apply_board_snapshot(data.get("board", []))
+		_sync_state_name(str(data.get("state", "")))
+	_show_result_popup(logic.get_state())
+	if logic.get_state() == GomokuBoardExt.STATE_PLAYING:
+		_set_turn_timer(data.get("turn_seconds", 30))
+		input_locked = false
+	else:
+		turn_deadline_msec = -1
+		input_locked = true
+	status_label.text = _turn_text()
+	queue_redraw()
+
+
+func _apply_board_snapshot(board_variant: Variant) -> void:
+	# C++ 쪽에 set_stone API가 없어, 빈 보드(game_start)만 reset으로 맞춘다.
+	# 일반 진행은 move의 place_stone 순서로 동기화한다.
+	if typeof(board_variant) != TYPE_ARRAY:
+		return
+	var empty := true
+	for row in board_variant:
+		if typeof(row) != TYPE_ARRAY:
+			continue
+		for cell in row:
+			if int(cell) != 0:
+				empty = false
+				break
+		if not empty:
+			break
+	if empty:
+		logic.reset()
+
+
+func _sync_state_name(state_name: String) -> void:
+	# place_stone으로 이미 state가 맞춰진 경우가 대부분.
+	# timeout 등에서 보드 스냅샷만 오고 로컬 state가 PLAYING이면 팝업용으로 강제 표시.
+	match state_name:
+		"black_win":
+			if logic.get_state() == GomokuBoardExt.STATE_PLAYING:
+				# C++에 set_state가 없으므로 팝업만 직접
+				result_label.text = "BLACK WINS!"
+				result_layer.show()
+		"white_win":
+			if logic.get_state() == GomokuBoardExt.STATE_PLAYING:
+				result_label.text = "WHITE WINS!"
+				result_layer.show()
+		"draw":
+			if logic.get_state() == GomokuBoardExt.STATE_PLAYING:
+				result_label.text = "DRAW!"
+				result_layer.show()
+
+
+func _set_turn_timer(seconds: Variant) -> void:
+	if seconds == null:
+		turn_deadline_msec = -1
+		return
+	turn_deadline_msec = Time.get_ticks_msec() + int(seconds) * 1000
+
+
+func _turn_text() -> String:
+	if logic.get_state() != GomokuBoardExt.STATE_PLAYING:
+		return status_label.text
+	var turn := logic.get_current_turn()
+	var name := _color_label(turn)
+	if online and my_color >= 0:
+		if turn == my_color:
+			return "당신(%s) 차례" % name
+		return "상대(%s) 차례" % name
+	return "%s 차례" % name
+
+
+func _color_from_name(name: String) -> int:
+	match name:
+		"black":
+			return GomokuBoardExt.STONE_BLACK
+		"white":
+			return GomokuBoardExt.STONE_WHITE
+		_:
+			return -1
+
+
+func _color_label(color: int) -> String:
+	match color:
+		GomokuBoardExt.STONE_BLACK:
+			return "흑"
+		GomokuBoardExt.STONE_WHITE:
+			return "백"
+		_:
+			return "?"
+
+
 func _grid_to_pixel(x: int, y: int) -> Vector2:
 	return board_origin + Vector2(x * cell_size, y * cell_size)
 
 
-# 화면 픽셀 → 가장 가까운 교차점 (x,y). 보드 밖이면 (-1,-1)
 func _pixel_to_grid(pos: Vector2) -> Vector2i:
 	var local := pos - board_origin
-	# 가장 가까운 교차점으로 반올림
 	var x := int(round(local.x / cell_size))
 	var y := int(round(local.y / cell_size))
-
-	# 클릭이 교차점에서 너무 멀면 무시 (셀 절반보다 멀면)
 	var nearest := _grid_to_pixel(x, y)
 	if pos.distance_to(nearest) > cell_size * 0.45:
 		return Vector2i(-1, -1)
-
 	if x < 0 or x >= BOARD_SIZE or y < 0 or y >= BOARD_SIZE:
 		return Vector2i(-1, -1)
-
 	return Vector2i(x, y)

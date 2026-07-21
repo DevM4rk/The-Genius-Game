@@ -1,0 +1,95 @@
+[gd_scene format=3 uid="uid://lobby_gomoku_001"]
+
+[ext_resource type="Script" path="res://scripts/lobby.gd" id="1_lobby"]
+
+[node name="Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.14, 0.18, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "Gomoku"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Phase 2 — Local / Online"
+horizontal_alignment = 1
+
+[node name="ServerInput" type="LineEdit" parent="Center/VBox"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+placeholder_text = "서버 주소 (http://127.0.0.1:8000)"
+alignment = 1
+
+[node name="LocalButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(360, 40)
+layout_mode = 2
+text = "로컬 2인 대전"
+
+[node name="QuickMatchButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(360, 40)
+layout_mode = 2
+text = "빠른 대전 (게스트 매칭)"
+
+[node name="CreateButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(360, 40)
+layout_mode = 2
+text = "온라인 방 만들기"
+
+[node name="RoomRow" type="HBoxContainer" parent="Center/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RoomInput" type="LineEdit" parent="Center/VBox/RoomRow"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "방 코드"
+alignment = 1
+
+[node name="JoinButton" type="Button" parent="Center/VBox/RoomRow"]
+custom_minimum_size = Vector2(112, 0)
+layout_mode = 2
+text = "참가"
+
+[node name="StatusLabel" type="Label" parent="Center/VBox"]
+custom_minimum_size = Vector2(360, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[connection signal="pressed" from="Center/VBox/LocalButton" to="." method="_on_local_pressed"]
+[connection signal="pressed" from="Center/VBox/QuickMatchButton" to="." method="_on_quick_match_pressed"]
+[connection signal="pressed" from="Center/VBox/CreateButton" to="." method="_on_create_pressed"]
+[connection signal="pressed" from="Center/VBox/RoomRow/JoinButton" to="." method="_on_join_pressed"]

@@ -17,6 +17,12 @@ core/godot-cpp/
 # Godot editor cache (also ignored under frontend/gomoku/.gitignore)
 **/.godot/
 
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
 # OS / editor
 .DS_Store
 Thumbs.db
