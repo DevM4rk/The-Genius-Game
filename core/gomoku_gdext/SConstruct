@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# 오목 GDExtension 빌드 스크립트.
+# godot-cpp가 기본 빌드 설정(env)을 만들어주고, 우리는 소스 파일 목록 + 출력 경로만 지정하면 됨.
+
+env = SConscript("../godot-cpp/SConstruct")
+
+env.Append(CPPPATH=["src/"])
+
+# 우리 래퍼 코드(src/*.cpp) + 순수 오목 로직(../gomoku/gomoku_board.cpp)을 같이 컴파일
+sources = Glob("src/*.cpp")
+sources.append("../gomoku/gomoku_board.cpp")
+
+# 빌드 결과(.dll 등)는 Godot 프로젝트의 bin 폴더에 바로 떨어지게 함
+if env["platform"] == "macos":
+    library = env.SharedLibrary(
+        "../../frontend/gomoku/bin/libgomoku.{}.{}.framework/libgomoku.{}.{}".format(
+            env["platform"], env["target"], env["platform"], env["target"]
+        ),
+        source=sources,
+    )
+else:
+    library = env.SharedLibrary(
+        "../../frontend/gomoku/bin/libgomoku{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+        source=sources,
+    )
+
+Default(library)

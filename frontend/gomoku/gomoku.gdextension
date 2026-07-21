@@ -1,0 +1,11 @@
+[configuration]
+
+entry_symbol = "gomoku_library_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+
+; 지금은 로컬 Windows 개발만 필요해서 windows만 등록해둠.
+; 나중에 Web export 할 때 web.* 항목 추가하면 됨.
+windows.debug.x86_64 = "res://bin/libgomoku.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://bin/libgomoku.windows.template_release.x86_64.dll"

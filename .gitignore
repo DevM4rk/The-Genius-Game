@@ -1,0 +1,24 @@
+# Build / IDE
+*.exe
+*.obj
+*.o
+*.lib
+*.exp
+*.dll
+*.so
+*.dylib
+*.wasm
+.sconsign.dblite
+.git_status_tmp.txt
+
+# Third-party (clone separately — see README)
+core/godot-cpp/
+
+# Godot editor cache (also ignored under frontend/gomoku/.gitignore)
+**/.godot/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
