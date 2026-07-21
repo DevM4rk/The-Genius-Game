@@ -31,6 +31,11 @@ int GomokuBoardExt::get_state() const {
     return static_cast<int>(board.get_state());
 }
 
+Vector2i GomokuBoardExt::suggest_move() const {
+    auto [x, y] = board.suggest_move();
+    return Vector2i(x, y);
+}
+
 void GomokuBoardExt::_bind_methods() {
     // GDScript에서 호출할 메서드 등록
     ClassDB::bind_method(D_METHOD("reset"), &GomokuBoardExt::reset);
@@ -38,6 +43,7 @@ void GomokuBoardExt::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_stone", "x", "y"), &GomokuBoardExt::get_stone);
     ClassDB::bind_method(D_METHOD("get_current_turn"), &GomokuBoardExt::get_current_turn);
     ClassDB::bind_method(D_METHOD("get_state"), &GomokuBoardExt::get_state);
+    ClassDB::bind_method(D_METHOD("suggest_move"), &GomokuBoardExt::suggest_move);
 
     // GDScript에서 매직 넘버 대신 GomokuBoardExt.STONE_BLACK 이런 식으로 쓸 수 있게 상수 등록
     BIND_CONSTANT(STONE_NONE);

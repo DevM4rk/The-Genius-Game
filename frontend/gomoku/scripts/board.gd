@@ -27,6 +27,11 @@ var my_color: int = -1
 var input_locked: bool = false
 var turn_deadline_msec: int = -1
 
+var vs_ai: bool = false
+var ai_color: int = -1
+var human_color: int = -1
+const AI_THINK_SECONDS := 0.35
+
 
 func _ready() -> void:
 	logic = GomokuBoardExt.new()
@@ -42,6 +47,8 @@ func _ready() -> void:
 	_create_result_popup()
 
 	online = GameSession.mode == GameSession.Mode.ONLINE or GameSession.mode == GameSession.Mode.QUICK
+	vs_ai = GameSession.mode == GameSession.Mode.AI
+
 	if online:
 		if GameSession.mode == GameSession.Mode.QUICK:
 			room_label.text = "빠른 대전 매칭 중…"
@@ -51,6 +58,12 @@ func _ready() -> void:
 		input_locked = true
 		restart_button.text = "재경기 요청"
 		_start_network()
+	elif vs_ai:
+		human_color = GomokuBoardExt.STONE_BLACK
+		ai_color = GomokuBoardExt.STONE_WHITE
+		room_label.text = "AI 대전 · 당신은 흑"
+		status_label.text = "당신(흑) 차례"
+		restart_button.text = "다시 시작"
 	else:
 		room_label.text = "로컬 대전"
 		status_label.text = "흑 차례"
@@ -159,7 +172,8 @@ func _on_restart_pressed() -> void:
 		return
 	logic.reset()
 	result_layer.hide()
-	status_label.text = "흑 차례"
+	input_locked = false
+	status_label.text = "당신(흑) 차례" if vs_ai else "흑 차례"
 	queue_redraw()
 
 
@@ -225,6 +239,9 @@ func _input(event: InputEvent) -> void:
 		net.send_place(x, y)
 		return
 
+	if vs_ai and logic.get_current_turn() != human_color:
+		return  # AI 차례엔 클릭 무시 (input_locked로도 막히지만 이중 안전장치)
+
 	var just_placed := logic.get_current_turn()
 	var result: int = logic.place_stone(x, y)
 	match result:
@@ -239,6 +256,31 @@ func _input(event: InputEvent) -> void:
 	_show_result_popup(logic.get_state())
 	status_label.text = _turn_text() if logic.get_state() == GomokuBoardExt.STATE_PLAYING else status_label.text
 	queue_redraw()
+
+	if vs_ai and logic.get_state() == GomokuBoardExt.STATE_PLAYING and logic.get_current_turn() == ai_color:
+		_take_ai_turn()
+
+
+func _take_ai_turn() -> void:
+	input_locked = true
+	status_label.text = "AI 생각 중…"
+	await get_tree().create_timer(AI_THINK_SECONDS).timeout
+
+	# 대기 중 재시작 등으로 게임이 바뀌었을 수 있으니 다시 확인
+	if logic.get_state() != GomokuBoardExt.STATE_PLAYING or logic.get_current_turn() != ai_color:
+		input_locked = false
+		return
+
+	var move: Vector2i = logic.suggest_move()
+	if move.x >= 0 and move.y >= 0:
+		logic.place_stone(move.x, move.y)
+		print("AI place at (", move.x, ", ", move.y, ")")
+
+	_show_result_popup(logic.get_state())
+	queue_redraw()
+	input_locked = false
+	if logic.get_state() == GomokuBoardExt.STATE_PLAYING:
+		status_label.text = _turn_text()
 
 
 func _on_net_message(data: Dictionary) -> void:
@@ -373,6 +415,10 @@ func _turn_text() -> String:
 		if turn == my_color:
 			return "당신(%s) 차례" % name
 		return "상대(%s) 차례" % name
+	if vs_ai:
+		if turn == human_color:
+			return "당신(%s) 차례" % name
+		return "AI(%s) 차례" % name
 	return "%s 차례" % name
 
 

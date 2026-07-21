@@ -41,7 +41,7 @@ horizontal_alignment = 1
 [node name="Subtitle" type="Label" parent="Center/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
-text = "Phase 2 — Local / Online"
+text = "Phase 4 — Singleplayer / Online"
 horizontal_alignment = 1
 
 [node name="ServerInput" type="LineEdit" parent="Center/VBox"]
@@ -50,10 +50,25 @@ layout_mode = 2
 placeholder_text = "서버 주소 (http://127.0.0.1:8000)"
 alignment = 1
 
-[node name="LocalButton" type="Button" parent="Center/VBox"]
+[node name="SinglePlayerButton" type="Button" parent="Center/VBox"]
 custom_minimum_size = Vector2(360, 40)
 layout_mode = 2
-text = "로컬 2인 대전"
+text = "싱글플레이"
+
+[node name="SinglePlayerChoices" type="HBoxContainer" parent="Center/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SoloButton" type="Button" parent="Center/VBox/SinglePlayerChoices"]
+custom_minimum_size = Vector2(176, 40)
+layout_mode = 2
+text = "혼자 두기 (로컬 2인)"
+
+[node name="AiButton" type="Button" parent="Center/VBox/SinglePlayerChoices"]
+custom_minimum_size = Vector2(176, 40)
+layout_mode = 2
+text = "AI와 대전"
 
 [node name="QuickMatchButton" type="Button" parent="Center/VBox"]
 custom_minimum_size = Vector2(360, 40)
@@ -89,7 +104,9 @@ text = ""
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[connection signal="pressed" from="Center/VBox/LocalButton" to="." method="_on_local_pressed"]
+[connection signal="pressed" from="Center/VBox/SinglePlayerButton" to="." method="_on_single_player_pressed"]
+[connection signal="pressed" from="Center/VBox/SinglePlayerChoices/SoloButton" to="." method="_on_local_pressed"]
+[connection signal="pressed" from="Center/VBox/SinglePlayerChoices/AiButton" to="." method="_on_ai_pressed"]
 [connection signal="pressed" from="Center/VBox/QuickMatchButton" to="." method="_on_quick_match_pressed"]
 [connection signal="pressed" from="Center/VBox/CreateButton" to="." method="_on_create_pressed"]
 [connection signal="pressed" from="Center/VBox/RoomRow/JoinButton" to="." method="_on_join_pressed"]

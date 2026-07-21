@@ -3,6 +3,27 @@
 
 #include "gomoku_board.h"
 
+#include <cstdlib>
+
+namespace {
+// 패턴별 점수표. "열린 끝(open end)"이 양쪽 다 비어있으면 다음 수에 더 위협적이므로 훨씬 높은 점수.
+// total>=5는 이미 승리 상태라 여기까지 오지 않지만 방어적으로 남겨둠.
+constexpr int SCORE_FIVE = 100000;
+constexpr int SCORE_OPEN_FOUR = 10000;    // 양끝 열린 4개 -> 다음 수에 거의 확정 승리
+constexpr int SCORE_SIMPLE_FOUR = 5000;   // 한쪽만 열린 4개 -> 막지 않으면 승리
+constexpr int SCORE_DEAD_FOUR = 50;       // 양끝 막힌 4개 -> 더 이상 위협 아님
+constexpr int SCORE_OPEN_THREE = 1000;    // 양끝 열린 3개 -> 다음 수에 열린 4 위협
+constexpr int SCORE_BLOCKED_THREE = 200;
+constexpr int SCORE_DEAD_THREE = 10;
+constexpr int SCORE_OPEN_TWO = 100;
+constexpr int SCORE_BLOCKED_TWO = 20;
+constexpr int SCORE_DEAD_TWO = 2;
+constexpr int SCORE_SINGLE = 5;
+
+// 방어 점수는 공격 점수보다 살짝 낮게 쳐서, 내가 이길 수 있는 상황에선 항상 공격을 우선한다.
+constexpr double DEFENSE_WEIGHT = 0.9;
+} // namespace
+
 GomokuBoard::GomokuBoard() {
     reset();
 }
@@ -110,4 +131,114 @@ bool GomokuBoard::is_board_full() const {
 
 void GomokuBoard::switch_turn() {
     current_turn = current_turn == Stone::BLACK ? Stone::WHITE : Stone::BLACK;
+}
+
+int GomokuBoard::score_axis(int x, int y, int dx, int dy, Stone stone) const {
+    // (x, y)는 실제로는 비어있는 칸이지만, 여기에 stone을 놓았다고 가정하고 평가한다.
+    // count_in_direction은 (x,y) 자신을 보지 않고 다음 칸부터 세므로 그대로 재사용 가능.
+    int forward = count_in_direction(x, y, dx, dy, stone);
+    int backward = count_in_direction(x, y, -dx, -dy, stone);
+    int total = 1 + forward + backward;
+
+    int fx = x + dx * (forward + 1);
+    int fy = y + dy * (forward + 1);
+    bool forward_open = is_in_bounds(fx, fy) && board[fy][fx] == Stone::NONE;
+
+    int bx = x - dx * (backward + 1);
+    int by = y - dy * (backward + 1);
+    bool backward_open = is_in_bounds(bx, by) && board[by][bx] == Stone::NONE;
+
+    int open_ends = (forward_open ? 1 : 0) + (backward_open ? 1 : 0);
+
+    if (total >= 5) {
+        return SCORE_FIVE;
+    }
+    if (total == 4) {
+        if (open_ends == 2) return SCORE_OPEN_FOUR;
+        if (open_ends == 1) return SCORE_SIMPLE_FOUR;
+        return SCORE_DEAD_FOUR;
+    }
+    if (total == 3) {
+        if (open_ends == 2) return SCORE_OPEN_THREE;
+        if (open_ends == 1) return SCORE_BLOCKED_THREE;
+        return SCORE_DEAD_THREE;
+    }
+    if (total == 2) {
+        if (open_ends == 2) return SCORE_OPEN_TWO;
+        if (open_ends == 1) return SCORE_BLOCKED_TWO;
+        return SCORE_DEAD_TWO;
+    }
+    return SCORE_SINGLE;
+}
+
+int GomokuBoard::score_candidate(int x, int y, Stone stone) const {
+    // 검사할 축은 4개(가로/세로/대각선 2개) - check_five_in_a_row와 동일한 축 구성.
+    static const int axes[4][2] = { {1, 0}, {0, 1}, {1, 1}, {1, -1} };
+    int total = 0;
+    for (const auto& axis : axes) {
+        total += score_axis(x, y, axis[0], axis[1], stone);
+    }
+    return total;
+}
+
+std::pair<int, int> GomokuBoard::suggest_move() const {
+    constexpr int center = BOARD_SIZE / 2;
+
+    // 1. 후보 좌표 수집: 기존 돌 주변(체비쇼프 거리 2 이내)의 빈 칸만 본다.
+    //    보드 전체(15x15=225칸)를 매번 평가하면 느려질 뿐 아니라, 돌에서 먼 칸은 어차피
+    //    의미있는 패턴 점수가 나올 수 없어서 후보에서 제외해도 결과가 같다.
+    bool any_stone = false;
+    std::array<std::array<bool, BOARD_SIZE>, BOARD_SIZE> is_candidate{};
+    for (int y = 0; y < BOARD_SIZE; ++y) {
+        for (int x = 0; x < BOARD_SIZE; ++x) {
+            if (board[y][x] == Stone::NONE) {
+                continue;
+            }
+            any_stone = true;
+            for (int ny = y - 2; ny <= y + 2; ++ny) {
+                for (int nx = x - 2; nx <= x + 2; ++nx) {
+                    if (is_in_bounds(nx, ny) && board[ny][nx] == Stone::NONE) {
+                        is_candidate[ny][nx] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. 보드가 완전히 비어있으면(첫 수) 중앙이 이론상 최선이므로 바로 리턴.
+    if (!any_stone) {
+        return { center, center };
+    }
+
+    // 3. 후보 중 "공격 점수 + 방어 점수*가중치"가 최대인 좌표 선택.
+    //    동점이면 중앙에 더 가까운 좌표를 우선해서, 초반에 형태가 흩어지지 않게 한다.
+    Stone me = current_turn;
+    Stone opp = (me == Stone::BLACK) ? Stone::WHITE : Stone::BLACK;
+
+    int best_x = -1;
+    int best_y = -1;
+    double best_score = -1.0;
+
+    for (int y = 0; y < BOARD_SIZE; ++y) {
+        for (int x = 0; x < BOARD_SIZE; ++x) {
+            if (!is_candidate[y][x]) {
+                continue;
+            }
+
+            int my_score = score_candidate(x, y, me);
+            int opp_score = score_candidate(x, y, opp);
+            double total = static_cast<double>(my_score) + static_cast<double>(opp_score) * DEFENSE_WEIGHT;
+
+            int dist = std::abs(x - center) + std::abs(y - center);
+            total -= dist * 0.01; // tie-break용 미세 보정, 패턴 점수 차이를 뒤집지 않음
+
+            if (total > best_score) {
+                best_score = total;
+                best_x = x;
+                best_y = y;
+            }
+        }
+    }
+
+    return { best_x, best_y };
 }

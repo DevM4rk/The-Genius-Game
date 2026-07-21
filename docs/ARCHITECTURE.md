@@ -18,7 +18,7 @@
 
 ## 진행 단계 (Phase)
 - **Phase 1**: 로컬 자유오목 2인 대전 (core + frontend, 서버/로그인/AI 없음) — 완료
-- **Phase 2 (현재)**: FastAPI + WebSocket 실시간 2인 대전 (사설 방 코드 방식, 서버 권위 보드, 30초 턴)
-- **Phase 3**: Google OAuth, PostgreSQL, Redis, 랭크 매칭
-- **Phase 4**: Docker/Nginx 배포, AI 싱글플레이
+- **Phase 2**: FastAPI + WebSocket 실시간 2인 대전 (사설 방 코드 방식, 서버 권위 보드, 30초 턴) — 완료
+- **Phase 4 (현재)**: AI 싱글플레이(완료) + Docker/Nginx 배포(진행 중, Web Export 연동 남음)
+- **Phase 3**: Google OAuth, PostgreSQL, Redis, 랭크 매칭 (Phase 4 이후로 미룸)
 - **Phase 5+**: 오목 외 다른 보드게임 추가

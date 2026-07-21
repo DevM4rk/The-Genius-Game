@@ -5,6 +5,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <utility>
 
 enum class Stone : uint8_t {
     NONE  = 0,
@@ -44,6 +45,12 @@ public:
     Stone get_current_turn() const { return current_turn; }
     GameState get_state() const { return state; }
 
+    // 규칙 기반 AI: 현재 차례(current_turn) 기준으로 다음 착수 좌표를 추천.
+    // 미니맥스/탐색 없이 1수 앞만 평가하는 휴리스틱(공격 점수 + 방어 점수)이라
+    // 즉시 이기는 수/막아야 하는 수는 잘 찾지만 장기 전략은 없음.
+    // 보드가 비어있으면 중앙을 리턴. 후보가 없으면 {-1, -1} 리턴(보드가 가득 찬 경우).
+    std::pair<int, int> suggest_move() const;
+
 private:
     // board[y][x] 형태로 저장 (2차원 배열)
     std::array<std::array<Stone, BOARD_SIZE>, BOARD_SIZE> board;
@@ -66,4 +73,11 @@ private:
     bool is_board_full() const;
 
     void switch_turn();
+
+    // (x, y)가 비어있다고 가정하고 거기에 stone을 놓았을 때 4축 패턴 점수를 합산.
+    // suggest_move()의 후보 평가에서 공격 점수(내 돌 기준)/방어 점수(상대 돌 기준) 계산에 재사용.
+    int score_candidate(int x, int y, Stone stone) const;
+
+    // 한 축(dx, dy)에서 (x, y)에 stone을 놓았을 때: 연속 개수 + 열린 끝 개수를 보고 점수 리턴.
+    int score_axis(int x, int y, int dx, int dy, Stone stone) const;
 };

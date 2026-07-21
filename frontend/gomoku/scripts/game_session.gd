@@ -1,7 +1,7 @@
 # game_session.gd — 로비 ↔ 보드 사이 세션 상태 (Autoload)
 extends Node
 
-enum Mode { LOCAL, ONLINE, QUICK }
+enum Mode { LOCAL, ONLINE, QUICK, AI }
 
 var mode: Mode = Mode.LOCAL
 var room_id: String = ""
@@ -21,6 +21,11 @@ func start_online(p_room_id: String) -> void:
 
 func start_quick_match() -> void:
 	mode = Mode.QUICK
+	room_id = ""
+	my_color = -1
+
+func start_ai_match() -> void:
+	mode = Mode.AI
 	room_id = ""
 	my_color = -1
 

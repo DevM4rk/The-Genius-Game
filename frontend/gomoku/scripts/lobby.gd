@@ -5,6 +5,7 @@ extends Control
 @onready var status_label: Label = $Center/VBox/StatusLabel
 @onready var room_input: LineEdit = $Center/VBox/RoomRow/RoomInput
 @onready var server_input: LineEdit = $Center/VBox/ServerInput
+@onready var single_player_choices: HBoxContainer = $Center/VBox/SinglePlayerChoices
 
 var _http: HTTPRequest
 
@@ -29,8 +30,17 @@ func _apply_server_urls() -> void:
 		GameSession.server_ws = "ws://" + base
 
 
+func _on_single_player_pressed() -> void:
+	single_player_choices.visible = not single_player_choices.visible
+
+
 func _on_local_pressed() -> void:
 	GameSession.reset_to_local()
+	get_tree().change_scene_to_file("res://board.tscn")
+
+
+func _on_ai_pressed() -> void:
+	GameSession.start_ai_match()
 	get_tree().change_scene_to_file("res://board.tscn")
 
 

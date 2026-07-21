@@ -5,7 +5,14 @@ compatibility_minimum = "4.1"
 
 [libraries]
 
-; 지금은 로컬 Windows 개발만 필요해서 windows만 등록해둠.
-; 나중에 Web export 할 때 web.* 항목 추가하면 됨.
 windows.debug.x86_64 = "res://bin/libgomoku.windows.template_debug.x86_64.dll"
 windows.release.x86_64 = "res://bin/libgomoku.windows.template_release.x86_64.dll"
+
+; Web(wasm) — core/gomoku_gdext에서 emsdk로 아래처럼 빌드해야 생성됨(기본값: threads=yes):
+;   scons platform=web target=template_debug
+;   scons platform=web target=template_release
+; threads=yes 빌드는 SharedArrayBuffer를 쓰기 때문에 브라우저가 COOP/COEP 헤더를 요구함
+; (infra/nginx/nginx.conf에 이미 추가해둠). Godot 에디터의 Web Export 프리셋에서도
+; "Thread Support"를 켜야 이 두 설정이 서로 맞음.
+web.debug.wasm32 = "res://bin/libgomoku.web.template_debug.wasm32.wasm"
+web.release.wasm32 = "res://bin/libgomoku.web.template_release.wasm32.wasm"

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/vector2i.hpp>
 
 #include "../../gomoku/gomoku_board.h"
 
@@ -57,6 +58,9 @@ public:
 
     // 게임 진행 상태 -> STATE_* 상수 리턴
     int get_state() const;
+
+    // 규칙 기반 AI 착수 추천 (현재 차례 기준). 후보가 없으면 Vector2i(-1, -1).
+    Vector2i suggest_move() const;
 };
 
 } // namespace godot

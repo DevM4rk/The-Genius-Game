@@ -12,6 +12,18 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+### Docker로 실행 (Phase 4)
+
+단독으로 이 컨테이너만 띄우는 것도 가능:
+
+```powershell
+cd backend
+docker build -t gomoku-backend .
+docker run --rm -p 8000:8000 gomoku-backend
+```
+
+Nginx까지 같이 띄우는 전체 구성은 `infra/README.md` 참고 (`infra/docker-compose.yml`).
+
 ## API
 
 | Method | Path | 설명 |

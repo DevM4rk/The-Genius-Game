@@ -1,3 +1,8 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Web Export 결과물 (Export > Web로 생성, 용량 크고 매번 재생성 가능해서 커밋 안 함)
+/export/web/*
+!/export/web/.gitkeep
+
