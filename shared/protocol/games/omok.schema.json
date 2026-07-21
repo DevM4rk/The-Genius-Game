@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://the-genius-game.local/protocol/games/omok.json",
+  "title": "OmokGamePayloads",
+  "description": "Omok-specific payload shapes used inside the shared WS envelope.",
+  "definitions": {
+    "Stone": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "0=empty, 1=black, 2=white"
+    },
+    "Coord": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0, "maximum": 14 },
+        "y": { "type": "integer", "minimum": 0, "maximum": 14 }
+      }
+    },
+    "BoardState": {
+      "type": "object",
+      "required": ["size", "stones", "turn", "move_count"],
+      "properties": {
+        "size": { "type": "integer", "const": 15 },
+        "stones": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Stone" },
+          "minItems": 225,
+          "maxItems": 225
+        },
+        "turn": { "$ref": "#/definitions/Stone" },
+        "move_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "MovePayload": {
+      "type": "object",
+      "required": ["game", "x", "y"],
+      "properties": {
+        "game": { "const": "omok" },
+        "x": { "type": "integer", "minimum": 0, "maximum": 14 },
+        "y": { "type": "integer", "minimum": 0, "maximum": 14 }
+      }
+    },
+    "GameOverPayload": {
+      "type": "object",
+      "required": ["game", "reason", "winner"],
+      "properties": {
+        "game": { "const": "omok" },
+        "reason": {
+          "type": "string",
+          "enum": ["five_in_a_row", "resign", "timeout", "draw", "illegal"]
+        },
+        "winner": {
+          "anyOf": [
+            { "$ref": "#/definitions/Stone" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "RoomCreatePayload": {
+      "type": "object",
+      "required": ["game", "mode"],
+      "properties": {
+        "game": { "const": "omok" },
+        "mode": {
+          "type": "string",
+          "enum": ["private", "rank"]
+        },
+        "ruleset": {
+          "type": "string",
+          "enum": ["freestyle", "renju"],
+          "default": "freestyle"
+        }
+      }
+    }
+  }
+}

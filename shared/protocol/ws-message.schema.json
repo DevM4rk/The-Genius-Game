@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://the-genius-game.local/protocol/ws-message.json",
+  "title": "GeniusGameWebSocketMessage",
+  "description": "Client ↔ FastAPI WebSocket envelope. All game-specific payloads live under `payload`.",
+  "type": "object",
+  "required": ["type", "payload"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "auth.hello",
+        "auth.ok",
+        "auth.error",
+        "match.enqueue",
+        "match.dequeue",
+        "match.found",
+        "match.status",
+        "room.create",
+        "room.created",
+        "room.join",
+        "room.joined",
+        "room.leave",
+        "room.state",
+        "room.error",
+        "game.move",
+        "game.moved",
+        "game.resign",
+        "game.timeout",
+        "game.over",
+        "spectator.join",
+        "spectator.joined",
+        "ping",
+        "pong"
+      ]
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Optional client correlation id"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

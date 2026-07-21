@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# C++ / CMake
+core/omok/build/
+core/omok/bin/
+cmake-build-*/
+
+# Godot
+frontend/.godot/
+frontend/export/
+*.translation
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Docker
+pgdata/

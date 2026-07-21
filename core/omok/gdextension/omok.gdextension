@@ -1,0 +1,16 @@
+[configuration]
+
+entry_symbol = "omok_library_init"
+compatibility_minimum = "4.2"
+
+[libraries]
+
+; Built artifacts land here after Phase 1 GDExtension link against godot-cpp.
+macos.debug = "res://../core/omok/bin/libomok.macos.template_debug.dylib"
+macos.release = "res://../core/omok/bin/libomok.macos.template_release.dylib"
+windows.debug.x86_64 = "res://../core/omok/bin/libomok.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://../core/omok/bin/libomok.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "res://../core/omok/bin/libomok.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://../core/omok/bin/libomok.linux.template_release.x86_64.so"
+web.debug.wasm32 = "res://../core/omok/bin/libomok.web.template_debug.wasm32.wasm"
+web.release.wasm32 = "res://../core/omok/bin/libomok.web.template_release.wasm32.wasm"
