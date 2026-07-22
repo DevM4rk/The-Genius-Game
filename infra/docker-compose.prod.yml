@@ -1,0 +1,7 @@
+# infra/docker-compose.prod.yml
+# EC2 등 실서버용: 80 포트로 외부 노출 (보안 그룹 HTTP 80과 맞춤)
+
+services:
+  nginx:
+    ports:
+      - "80:80"

@@ -8,6 +8,8 @@
 *.so
 *.dylib
 *.wasm
+!frontend/gomoku/export/web/**/*.wasm
+
 .sconsign.dblite
 .git_status_tmp.txt
 
