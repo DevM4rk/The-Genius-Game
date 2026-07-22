@@ -25,6 +25,9 @@ backend/.venv/
 *.pyc
 .pytest_cache/
 
+# TLS certs (generate on server; do not commit private keys)
+infra/certs/
+
 # OS / editor
 .DS_Store
 Thumbs.db

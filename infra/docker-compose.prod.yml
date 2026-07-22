@@ -1,7 +1,12 @@
 # infra/docker-compose.prod.yml
-# EC2 등 실서버용: 80 포트로 외부 노출 (보안 그룹 HTTP 80과 맞춤)
+# EC2: HTTPS(Godot Secure Context) + HTTP→HTTPS 리다이렉트
 
 services:
   nginx:
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ../frontend/gomoku/export/web:/usr/share/nginx/html:ro
