@@ -1,0 +1,75 @@
+[gd_resource type="Theme" load_steps=6 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/NotoSansKR.ttf" id="1_font"]
+
+[sub_resource type="StyleBoxFlat" id="btn_normal"]
+bg_color = Color(0.92, 0.92, 0.90, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16
+content_margin_top = 10
+content_margin_right = 16
+content_margin_bottom = 10
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+bg_color = Color(1, 1, 0.98, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16
+content_margin_top = 10
+content_margin_right = 16
+content_margin_bottom = 10
+
+[sub_resource type="StyleBoxFlat" id="btn_pressed"]
+bg_color = Color(0.82, 0.82, 0.80, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16
+content_margin_top = 10
+content_margin_right = 16
+content_margin_bottom = 10
+
+[sub_resource type="StyleBoxFlat" id="input_normal"]
+bg_color = Color(0.16, 0.17, 0.20, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.40, 0.42, 0.48, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 12
+content_margin_top = 8
+content_margin_right = 12
+content_margin_bottom = 8
+
+[resource]
+default_font = ExtResource("1_font")
+default_font_size = 16
+Button/colors/font_color = Color(0.10, 0.10, 0.11, 1)
+Button/colors/font_hover_color = Color(0.08, 0.08, 0.09, 1)
+Button/colors/font_pressed_color = Color(0.05, 0.05, 0.06, 1)
+Button/fonts/font = ExtResource("1_font")
+Button/font_sizes/font_size = 17
+Button/styles/normal = SubResource("btn_normal")
+Button/styles/hover = SubResource("btn_hover")
+Button/styles/pressed = SubResource("btn_pressed")
+Button/styles/focus = SubResource("btn_hover")
+LineEdit/colors/font_color = Color(0.92, 0.92, 0.94, 1)
+LineEdit/colors/font_placeholder_color = Color(0.55, 0.57, 0.62, 1)
+LineEdit/fonts/font = ExtResource("1_font")
+LineEdit/styles/normal = SubResource("input_normal")
+LineEdit/styles/focus = SubResource("input_normal")
+Label/fonts/font = ExtResource("1_font")

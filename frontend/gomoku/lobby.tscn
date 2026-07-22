@@ -1,6 +1,8 @@
-[gd_scene format=3 uid="uid://lobby_gomoku_001"]
+[gd_scene load_steps=4 format=3 uid="uid://lobby_gomoku_001"]
 
 [ext_resource type="Script" path="res://scripts/lobby.gd" id="1_lobby"]
+[ext_resource type="Script" path="res://scripts/lobby_board_art.gd" id="2_board"]
+[ext_resource type="Theme" path="res://theme/lobby_theme.tres" id="3_theme"]
 
 [node name="Lobby" type="Control"]
 layout_mode = 3
@@ -9,6 +11,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("3_theme")
 script = ExtResource("1_lobby")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -18,95 +21,142 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.12, 0.14, 0.18, 1)
+color = Color(0.07, 0.08, 0.10, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Glow" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -280.0
+offset_right = 280.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.85, 0.55, 0.045)
+
+[node name="RootMargin" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
 
-[node name="VBox" type="VBoxContainer" parent="Center"]
+[node name="HBox" type="HBoxContainer" parent="RootMargin"]
 layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="Title" type="Label" parent="Center/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 36
-text = "Gomoku"
-horizontal_alignment = 1
-
-[node name="Subtitle" type="Label" parent="Center/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Phase 4 — Singleplayer / Online"
-horizontal_alignment = 1
-
-[node name="ServerInput" type="LineEdit" parent="Center/VBox"]
-custom_minimum_size = Vector2(360, 0)
-layout_mode = 2
-placeholder_text = "서버 주소 (http://127.0.0.1:8000)"
+theme_override_constants/separation = 48
 alignment = 1
 
-[node name="SinglePlayerButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(360, 40)
+[node name="BoardArt" type="Control" parent="RootMargin/HBox"]
+custom_minimum_size = Vector2(420, 420)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+size_flags_stretch_ratio = 1.15
+script = ExtResource("2_board")
+
+[node name="MenuCenter" type="CenterContainer" parent="RootMargin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="RootMargin/HBox/MenuCenter"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="RootMargin/HBox/MenuCenter/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 56
+text = "오목"
+horizontal_alignment = 1
+
+[node name="TitleRule" type="ColorRect" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(72, 3)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.92, 0.68, 0.28, 0.95)
+
+[node name="SpacerTop" type="Control" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="SinglePlayerButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "싱글플레이"
 
-[node name="SinglePlayerChoices" type="HBoxContainer" parent="Center/VBox"]
+[node name="SinglePlayerChoices" type="HBoxContainer" parent="RootMargin/HBox/MenuCenter/VBox"]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="SoloButton" type="Button" parent="Center/VBox/SinglePlayerChoices"]
-custom_minimum_size = Vector2(176, 40)
+[node name="SoloButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox/SinglePlayerChoices"]
+custom_minimum_size = Vector2(176, 44)
 layout_mode = 2
-text = "혼자 두기 (로컬 2인)"
+size_flags_horizontal = 3
+text = "혼자 두기"
 
-[node name="AiButton" type="Button" parent="Center/VBox/SinglePlayerChoices"]
-custom_minimum_size = Vector2(176, 40)
+[node name="AiButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox/SinglePlayerChoices"]
+custom_minimum_size = Vector2(176, 44)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "AI와 대전"
 
-[node name="QuickMatchButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(360, 40)
+[node name="QuickMatchButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
-text = "빠른 대전 (게스트 매칭)"
+text = "빠른 대전"
 
-[node name="CreateButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(360, 40)
+[node name="CreateButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "온라인 방 만들기"
 
-[node name="RoomRow" type="HBoxContainer" parent="Center/VBox"]
+[node name="JoinButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox"]
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+text = "온라인 방 참여"
+
+[node name="JoinChoices" type="HBoxContainer" parent="RootMargin/HBox/MenuCenter/VBox"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="RoomInput" type="LineEdit" parent="Center/VBox/RoomRow"]
-custom_minimum_size = Vector2(240, 0)
+[node name="RoomInput" type="LineEdit" parent="RootMargin/HBox/MenuCenter/VBox/JoinChoices"]
+custom_minimum_size = Vector2(240, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "방 코드"
 alignment = 1
 
-[node name="JoinButton" type="Button" parent="Center/VBox/RoomRow"]
-custom_minimum_size = Vector2(112, 0)
+[node name="JoinConfirmButton" type="Button" parent="RootMargin/HBox/MenuCenter/VBox/JoinChoices"]
+custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 text = "참가"
 
-[node name="StatusLabel" type="Label" parent="Center/VBox"]
+[node name="StatusLabel" type="Label" parent="RootMargin/HBox/MenuCenter/VBox"]
 custom_minimum_size = Vector2(360, 40)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.72, 0.76, 1)
 theme_override_font_sizes/font_size = 14
 text = ""
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[connection signal="pressed" from="Center/VBox/SinglePlayerButton" to="." method="_on_single_player_pressed"]
-[connection signal="pressed" from="Center/VBox/SinglePlayerChoices/SoloButton" to="." method="_on_local_pressed"]
-[connection signal="pressed" from="Center/VBox/SinglePlayerChoices/AiButton" to="." method="_on_ai_pressed"]
-[connection signal="pressed" from="Center/VBox/QuickMatchButton" to="." method="_on_quick_match_pressed"]
-[connection signal="pressed" from="Center/VBox/CreateButton" to="." method="_on_create_pressed"]
-[connection signal="pressed" from="Center/VBox/RoomRow/JoinButton" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/SinglePlayerButton" to="." method="_on_single_player_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/SinglePlayerChoices/SoloButton" to="." method="_on_local_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/SinglePlayerChoices/AiButton" to="." method="_on_ai_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/QuickMatchButton" to="." method="_on_quick_match_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/CreateButton" to="." method="_on_create_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/JoinButton" to="." method="_on_join_menu_pressed"]
+[connection signal="pressed" from="RootMargin/HBox/MenuCenter/VBox/JoinChoices/JoinConfirmButton" to="." method="_on_join_pressed"]
