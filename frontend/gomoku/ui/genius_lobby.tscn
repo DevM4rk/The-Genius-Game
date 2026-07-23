@@ -1,0 +1,191 @@
+[gd_scene load_steps=3 format=3 uid="uid://genius_lobby_001"]
+
+[ext_resource type="Script" path="res://scripts/genius_lobby.gd" id="1_lobby"]
+[ext_resource type="Theme" path="res://theme/lobby_theme.tres" id="2_theme"]
+
+[node name="GeniusLobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.10, 1)
+
+[node name="Glow" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -280.0
+offset_right = 280.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.85, 0.55, 0.045)
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
+
+[node name="Center" type="CenterContainer" parent="RootMargin"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="RootMargin/Center"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="RootMargin/Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 48
+text = "지니어스게임"
+horizontal_alignment = 1
+
+[node name="TitleRule" type="ColorRect" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(72, 3)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.92, 0.68, 0.28, 0.95)
+
+[node name="SpacerTop" type="Control" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="RulesButton" type="Button" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+text = "게임규칙"
+
+[node name="SoloButton" type="Button" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+text = "혼자하기"
+
+[node name="RandomMatchButton" type="Button" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+text = "랜덤매치"
+
+[node name="CreateRoomButton" type="Button" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(360, 48)
+layout_mode = 2
+text = "방만들기"
+
+[node name="StatusLabel" type="Label" parent="RootMargin/Center/VBox"]
+custom_minimum_size = Vector2(360, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="MatchChoicePopup" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="MatchChoicePopup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.05, 0.72)
+
+[node name="Panel" type="PanelContainer" parent="MatchChoicePopup"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -160.0
+offset_right = 200.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="MatchChoicePopup/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="MatchChoicePopup/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="MatchChoicePopup/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "랜덤매치"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="MatchChoicePopup/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 13
+text = "대기할 방식을 선택하세요."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PickGameButton" type="Button" parent="MatchChoicePopup/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "게임 선택 대기"
+
+[node name="AnyGameButton" type="Button" parent="MatchChoicePopup/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "완전 랜덤"
+
+[node name="CloseButton" type="Button" parent="MatchChoicePopup/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "닫기"
+
+[node name="StubDialog" type="AcceptDialog" parent="."]
+title = "알림"
+dialog_text = ""
+ok_button_text = "확인"
+
+[connection signal="pressed" from="RootMargin/Center/VBox/RulesButton" to="." method="_on_rules_pressed"]
+[connection signal="pressed" from="RootMargin/Center/VBox/SoloButton" to="." method="_on_solo_pressed"]
+[connection signal="pressed" from="RootMargin/Center/VBox/RandomMatchButton" to="." method="_on_random_match_pressed"]
+[connection signal="pressed" from="RootMargin/Center/VBox/CreateRoomButton" to="." method="_on_create_room_pressed"]
+[connection signal="gui_input" from="MatchChoicePopup/Dimmer" to="." method="_on_match_choice_dimmer_gui_input"]
+[connection signal="pressed" from="MatchChoicePopup/Panel/Margin/VBox/PickGameButton" to="." method="_on_match_choice_a_pressed"]
+[connection signal="pressed" from="MatchChoicePopup/Panel/Margin/VBox/AnyGameButton" to="." method="_on_match_choice_b_pressed"]
+[connection signal="pressed" from="MatchChoicePopup/Panel/Margin/VBox/CloseButton" to="." method="_on_match_choice_close"]

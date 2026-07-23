@@ -50,7 +50,9 @@ func _ready() -> void:
 	vs_ai = GameSession.mode == GameSession.Mode.AI
 
 	if online:
-		if GameSession.mode == GameSession.Mode.QUICK:
+		if GameSession.mode == GameSession.Mode.QUICK and GameSession.room_id != "":
+			room_label.text = "방: %s" % GameSession.room_id
+		elif GameSession.mode == GameSession.Mode.QUICK:
 			room_label.text = "빠른 대전 매칭 중…"
 		else:
 			room_label.text = "방: %s" % GameSession.room_id
@@ -59,11 +61,17 @@ func _ready() -> void:
 		restart_button.text = "재경기 요청"
 		_start_network()
 	elif vs_ai:
-		human_color = GomokuBoardExt.STONE_BLACK
-		ai_color = GomokuBoardExt.STONE_WHITE
-		room_label.text = "AI 대전 · 당신은 흑"
-		status_label.text = "당신(흑) 차례"
+		if GameSession.prefer_first:
+			human_color = GomokuBoardExt.STONE_BLACK
+			ai_color = GomokuBoardExt.STONE_WHITE
+		else:
+			human_color = GomokuBoardExt.STONE_WHITE
+			ai_color = GomokuBoardExt.STONE_BLACK
+		room_label.text = "AI 대전 · 당신은 %s" % _color_label(human_color)
+		status_label.text = _turn_text()
 		restart_button.text = "다시 시작"
+		if logic.get_current_turn() == ai_color:
+			_take_ai_turn()
 	else:
 		room_label.text = "로컬 대전"
 		status_label.text = "흑 차례"
@@ -83,6 +91,17 @@ func _process(_delta: float) -> void:
 
 
 func _start_network() -> void:
+	if GameSession.net != null and is_instance_valid(GameSession.net):
+		net = GameSession.net
+		net.message.connect(_on_net_message)
+		net.disconnected.connect(_on_net_disconnected)
+		if GameSession.room_id != "":
+			room_label.text = "방: %s" % GameSession.room_id
+		status_label.text = "동기화 중…"
+		for pending in GameSession.take_pending_messages():
+			_on_net_message(pending)
+		return
+
 	net = NetworkClientScript.new()
 	add_child(net)
 	net.message.connect(_on_net_message)
@@ -173,15 +192,17 @@ func _on_restart_pressed() -> void:
 	logic.reset()
 	result_layer.hide()
 	input_locked = false
-	status_label.text = "당신(흑) 차례" if vs_ai else "흑 차례"
+	status_label.text = _turn_text() if vs_ai else "흑 차례"
 	queue_redraw()
+	if vs_ai and logic.get_current_turn() == ai_color:
+		_take_ai_turn()
 
 
 func _on_back_pressed() -> void:
-	if net:
+	if net != null and is_instance_valid(net) and net != GameSession.net:
 		net.disconnect_from_room()
 	GameSession.reset_to_local()
-	get_tree().change_scene_to_file("res://lobby.tscn")
+	get_tree().change_scene_to_file("res://ui/genius_lobby.tscn")
 
 
 func _draw() -> void:

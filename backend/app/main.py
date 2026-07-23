@@ -71,14 +71,24 @@ async def _run_room_message_loop(room: Room, websocket: WebSocket) -> None:
 
 
 @app.websocket("/ws/quick")
-async def websocket_quick_match(websocket: WebSocket) -> None:
-    """게스트 빠른 매칭 — 로그인/Elo 없이 먼저 온 두 명을 그대로 짝지음."""
-    await websocket.accept()
-    await websocket.send_json({"type": "queued"})
+async def websocket_quick_match(
+    websocket: WebSocket,
+    game: str | None = None,
+) -> None:
+    """게스트 빠른 매칭.
 
-    # 대기 중 상대를 기다리는 동시에, 그 사이 연결이 끊기는지도 감시한다
-    # (receive_json이 끊김을 감지하는 유일한 방법이라 두 태스크를 경쟁시킴).
-    enqueue_task = asyncio.create_task(quick_queue.enqueue(websocket))
+    query `game`:
+      - 없거나 `any` → B(완전 랜덤)
+      - 그 외 → A(해당 게임 대기)
+    """
+    preferred: str | None = None
+    if game and game.strip() and game.strip().lower() != "any":
+        preferred = game.strip().lower()
+
+    await websocket.accept()
+    await websocket.send_json({"type": "queued", "game": preferred or "any"})
+
+    enqueue_task = asyncio.create_task(quick_queue.enqueue(websocket, preferred))
     watch_task = asyncio.create_task(websocket.receive_json())
 
     done, pending = await asyncio.wait(
@@ -88,21 +98,23 @@ async def websocket_quick_match(websocket: WebSocket) -> None:
     if enqueue_task not in done:
         enqueue_task.cancel()
         if watch_task.done():
-            watch_task.exception()  # 예외를 소비해 경고 방지
+            watch_task.exception()
         await quick_queue.cancel(websocket)
         return
 
     if watch_task in pending:
         watch_task.cancel()
 
-    room_id = enqueue_task.result()
+    room_id, game_id = enqueue_task.result()
     room = await manager.connect(room_id, websocket)
     if room is None:
         await websocket.send_json({"type": "error", "message": "room_full"})
         await websocket.close(code=4000)
         return
 
-    await websocket.send_json({"type": "matched", "room_id": room_id})
+    await websocket.send_json(
+        {"type": "matched", "room_id": room_id, "game_id": game_id},
+    )
     await manager.on_joined(room, websocket)
     await _run_room_message_loop(room, websocket)
 

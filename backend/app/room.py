@@ -277,41 +277,81 @@ class RoomManager:
 
 manager = RoomManager()
 
+DEFAULT_QUICK_GAME = "gomoku"
+
+
+def resolve_quick_game(pref_a: str | None, pref_b: str | None) -> str | None:
+    """A/B 매칭 규칙.
+
+    - A1-A1 → game1
+    - A1-A2 → 불가
+    - A1-B / B-A1 → game1
+    - B-B → 기본 게임
+    """
+    if pref_a and pref_b:
+        return pref_a if pref_a == pref_b else None
+    if pref_a:
+        return pref_a
+    if pref_b:
+        return pref_b
+    return DEFAULT_QUICK_GAME
+
+
+class QueueEntry:
+    __slots__ = ("ws", "preferred_game", "future")
+
+    def __init__(
+        self,
+        ws: WebSocket,
+        preferred_game: str | None,
+        future: asyncio.Future,
+    ) -> None:
+        self.ws = ws
+        self.preferred_game = preferred_game
+        self.future = future
+
 
 class MatchQueue:
-    """게스트 빠른 매칭 — 로그인/Elo 없이 먼저 온 두 명을 그대로 짝지음."""
+    """게스트 빠른 매칭 — preferred_game(A) / None=any(B) 규칙으로 짝지음."""
 
     def __init__(self, room_manager: RoomManager) -> None:
         self._manager = room_manager
         self._lock = asyncio.Lock()
-        self._waiting_ws: WebSocket | None = None
-        self._pending: dict[WebSocket, asyncio.Future] = {}
+        self._waiting: list[QueueEntry] = []
 
-    async def enqueue(self, ws: WebSocket) -> str:
-        """대기열에 들어가고, 상대가 잡히면 room_id를 리턴."""
+    async def enqueue(
+        self, ws: WebSocket, preferred_game: str | None
+    ) -> tuple[str, str]:
+        """대기열에 들어가고, 상대가 잡히면 (room_id, game_id)를 리턴."""
         async with self._lock:
-            partner = self._waiting_ws
-            if partner is not None and partner is not ws:
-                self._waiting_ws = None
+            for i, other in enumerate(self._waiting):
+                if other.ws is ws:
+                    continue
+                game_id = resolve_quick_game(preferred_game, other.preferred_game)
+                if game_id is None:
+                    continue
+                self._waiting.pop(i)
                 room_id = self._manager.create_room()
-                fut = self._pending.pop(partner, None)
-                if fut is not None and not fut.done():
-                    fut.set_result(room_id)
-                return room_id
+                result = (room_id, game_id)
+                if not other.future.done():
+                    other.future.set_result(result)
+                return result
 
-            fut = asyncio.get_running_loop().create_future()
-            self._pending[ws] = fut
-            self._waiting_ws = ws
+            fut: asyncio.Future = asyncio.get_running_loop().create_future()
+            self._waiting.append(QueueEntry(ws, preferred_game, fut))
 
         return await fut
 
     async def cancel(self, ws: WebSocket) -> None:
         async with self._lock:
-            if self._waiting_ws is ws:
-                self._waiting_ws = None
-            fut = self._pending.pop(ws, None)
-            if fut is not None and not fut.done():
-                fut.cancel()
+            kept: list[QueueEntry] = []
+            for entry in self._waiting:
+                if entry.ws is ws:
+                    if not entry.future.done():
+                        entry.future.cancel()
+                else:
+                    kept.append(entry)
+            self._waiting = kept
 
 
 quick_queue = MatchQueue(manager)
