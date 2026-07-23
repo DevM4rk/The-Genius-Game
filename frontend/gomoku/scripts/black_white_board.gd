@@ -414,6 +414,9 @@ func _show_result(record: Dictionary) -> void:
 	if token != _result_token or not is_instance_valid(self):
 		return
 
+	# 3·2·1 끝난 뒤에야 상단 점수를 갱신한다.
+	score_label.text = "%d : %d" % [bw_match.scores[0], bw_match.scores[1]]
+
 	var winner: int = record["winner"]
 	if bw_match.is_over():
 		if bw_match.is_tie():
@@ -791,12 +794,9 @@ func _show_online_result(data: Dictionary) -> void:
 	var winner: int = int(last_result.get("winner", -1))
 
 	# 후공 제출 직후 손패/상대 행에서 낸 슬롯을 바로 빈 칸으로 반영.
+	# 점수는 3·2·1 공개 전까지 이전 값을 유지한다.
 	_rebuild_online_row(hand_row, data.get("my_hand", []), false)
 	_rebuild_online_opp_row(opponent_row, data.get("opp_hand", []))
-	score_label.text = "%d : %d" % [
-		int(data.get("scores", [0, 0])[0]),
-		int(data.get("scores", [0, 0])[1]),
-	]
 
 	_fill_stage_color(
 		first_stage_slot,
@@ -828,6 +828,8 @@ func _show_online_result(data: Dictionary) -> void:
 		return
 
 	var scores: Array = data.get("scores", [0, 0])
+	# 3·2·1 끝난 뒤에야 상단 점수를 갱신한다.
+	score_label.text = "%d : %d" % [scores[0], scores[1]]
 	if bool(data.get("is_over", false)):
 		if bool(data.get("is_tie", false)):
 			result_label.text = "동점!"
