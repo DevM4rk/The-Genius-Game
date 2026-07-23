@@ -37,6 +37,7 @@ const TILE_SEP := 8
 @onready var result_panel: PanelContainer = $ResultOverlay/Panel
 @onready var result_label: Label = $ResultOverlay/Panel/Margin/VBox/ResultLabel
 @onready var result_detail_label: Label = $ResultOverlay/Panel/Margin/VBox/ScoreDetailLabel
+@onready var result_next_button: Button = $ResultOverlay/Panel/Margin/VBox/NextButton
 
 @onready var end_overlay: Control = $MatchEndOverlay
 @onready var end_panel: PanelContainer = $MatchEndOverlay/Panel
@@ -60,6 +61,7 @@ var _swap_selected_slot: int = -1
 var _is_first_segment: bool = true
 var _pending_starter: int = 0
 var _pass_continue_action: Callable = Callable()
+var _result_token: int = 0
 
 
 func _ready() -> void:
@@ -94,11 +96,14 @@ func _make_tile_button(value: int, size: Vector2) -> Button:
 	btn.add_theme_stylebox_override("hover", style)
 	btn.add_theme_stylebox_override("pressed", style)
 	btn.add_theme_stylebox_override("focus", style)
+	btn.add_theme_stylebox_override("disabled", style)
 	btn.text = str(value)
-	btn.add_theme_color_override(
-		"font_color",
-		Color(0.95, 0.95, 0.96, 1) if black else Color(0.10, 0.10, 0.11, 1)
-	)
+	var font_color := Color(0.95, 0.95, 0.96, 1) if black else Color(0.10, 0.10, 0.11, 1)
+	btn.add_theme_color_override("font_color", font_color)
+	btn.add_theme_color_override("font_hover_color", font_color)
+	btn.add_theme_color_override("font_pressed_color", font_color)
+	btn.add_theme_color_override("font_focus_color", font_color)
+	btn.add_theme_color_override("font_disabled_color", font_color)
 	btn.add_theme_font_size_override("font_size", int(size.y * 0.26))
 	return btn
 
@@ -297,16 +302,57 @@ func _on_pass_continue_pressed() -> void:
 
 
 func _show_result(record: Dictionary) -> void:
-	var winner: int = record["winner"]
-	result_label.text = "무승부" if winner < 0 else "%s 승리!" % PLAYER_NAMES[winner]
-	result_detail_label.text = "점수 — %s %d : %d %s" % [
-		PLAYER_NAMES[0], bw_match.scores[0], bw_match.scores[1], PLAYER_NAMES[1]
-	]
+	_result_token += 1
+	var token := _result_token
+	result_next_button.visible = false
+	result_label.text = "모두 카드를 냈습니다.\n승패를 공개합니다."
+	result_detail_label.text = ""
 	result_overlay.visible = true
+
+	for n in range(3, 0, -1):
+		if token != _result_token or not is_instance_valid(self):
+			return
+		result_detail_label.text = str(n)
+		await get_tree().create_timer(1.0).timeout
+
+	if token != _result_token or not is_instance_valid(self):
+		return
+
+	var winner: int = record["winner"]
+	if bw_match.is_over():
+		if bw_match.is_tie():
+			result_label.text = "동점!"
+			result_detail_label.text = "연장전을 진행합니다.\n점수 %d : %d" % [
+				bw_match.scores[0], bw_match.scores[1]
+			]
+		else:
+			var segment_winner := bw_match.segment_winner()
+			result_label.text = "%s 승!" % PLAYER_NAMES[segment_winner]
+			result_detail_label.text = "데스매치 종료\n점수 %d : %d" % [
+				bw_match.scores[0], bw_match.scores[1]
+			]
+		result_next_button.text = "결과 보기"
+	else:
+		var next_starter: int = bw_match.starter
+		var look_away: int = bw_match.other(next_starter)
+		if winner < 0:
+			result_label.text = "무승부!"
+		else:
+			result_label.text = "%s 승!" % PLAYER_NAMES[winner]
+		result_detail_label.text = "%s이 선입니다.\n%s은 보지 말아주세요.\n\n점수 %d : %d" % [
+			PLAYER_NAMES[next_starter],
+			PLAYER_NAMES[look_away],
+			bw_match.scores[0],
+			bw_match.scores[1],
+		]
+		result_next_button.text = "다음 라운드"
+	result_next_button.visible = true
 
 
 func _on_result_next_pressed() -> void:
+	_result_token += 1
 	result_overlay.visible = false
+	result_next_button.visible = true
 	_clear_staging()
 	if bw_match.is_over():
 		_show_match_end()

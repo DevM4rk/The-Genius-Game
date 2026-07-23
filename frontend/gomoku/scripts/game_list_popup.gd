@@ -69,12 +69,13 @@ func open(mode: Mode) -> void:
 			_detail.text = "규칙을 볼 게임을 선택하세요."
 		Mode.SOLO:
 			_title.text = "혼자하기"
-			_solo_row.visible = true
-			_turn_row.visible = false  # 게임 선택 후 지원 여부에 따라 표시
+			_solo_row.visible = false
+			_turn_row.visible = false
 			_action_row.visible = true
 			_action_button.text = "시작"
 			_action_button.disabled = true
 			_solo_toggle.button_pressed = true
+			_solo_toggle.disabled = false
 			_turn_toggle.button_pressed = true
 			_refresh_solo_hint()
 			_refresh_turn_hint()
@@ -118,6 +119,12 @@ func _on_game_pressed(game_id: String) -> void:
 		Mode.SOLO:
 			_action_button.disabled = _selected_id.is_empty()
 			var game := GameCatalog.by_id(game_id)
+			_solo_row.visible = true
+			var supports_ai := bool(game.get("supports_ai", false))
+			_solo_toggle.disabled = not supports_ai
+			if not supports_ai:
+				_solo_toggle.button_pressed = true
+			_refresh_solo_hint()
 			_turn_row.visible = bool(game.get("supports_turn_choice", false))
 		Mode.MATCH_PICK:
 			_action_button.disabled = _selected_id.is_empty()

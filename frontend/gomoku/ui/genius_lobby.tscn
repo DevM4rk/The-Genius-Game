@@ -152,7 +152,7 @@ autowrap_mode = 3
 [node name="PickGameButton" type="Button" parent="MatchChoicePopup/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-text = "게임 선택 대기"
+text = "게임 선택"
 
 [node name="AnyGameButton" type="Button" parent="MatchChoicePopup/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 44)
