@@ -288,6 +288,12 @@ func _on_hand_tile_pressed(slot: int) -> void:
 
 
 func _show_pass(text: String, action: Callable) -> void:
+	# 화면 넘김 중에는 뒤의 숫자 타일이 비치지 않도록 즉시 가린다.
+	_clear_container(hand_row)
+	_clear_container(opponent_row)
+	hand_title_label.text = ""
+	prompt_label.text = ""
+	arrange_button_row.visible = false
 	pass_label.text = text
 	_pass_continue_action = action
 	pass_overlay.visible = true
