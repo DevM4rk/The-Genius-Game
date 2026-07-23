@@ -80,12 +80,12 @@ func _build_legend_row() -> void:
 		var tile := _make_tile_button(value, false)
 		tile.tooltip_text = "숫자 %d — 참고용(탭하여 표시)" % value
 		tile.pressed.connect(_on_legend_tile_pressed.bind(value, tile))
-		_apply_elim_style(tile, eliminated_marks.get(value, false))
+		_apply_elim_style(tile, bool(eliminated_marks.get(value, false)))
 		opponent_row.add_child(tile)
 
 
 func _on_legend_tile_pressed(value: int, tile: Button) -> void:
-	var marked := not eliminated_marks.get(value, false)
+	var marked: bool = not bool(eliminated_marks.get(value, false))
 	eliminated_marks[value] = marked
 	_apply_elim_style(tile, marked)
 
