@@ -45,6 +45,18 @@ func send_restart() -> void:
 	send_dict({"type": "restart"})
 
 
+func send_bw_arrange(arrangement: Array) -> void:
+	send_dict({"type": "bw_arrange", "arrangement": arrangement})
+
+
+func send_bw_play(slot: int) -> void:
+	send_dict({"type": "bw_play", "slot": slot})
+
+
+func send_bw_rematch() -> void:
+	send_dict({"type": "bw_rematch"})
+
+
 var _was_open: bool = false
 
 

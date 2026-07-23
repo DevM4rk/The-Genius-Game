@@ -6,7 +6,7 @@ import asyncio
 import secrets
 import string
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import WebSocket
 
@@ -312,10 +312,21 @@ class QueueEntry:
 
 
 class MatchQueue:
-    """게스트 빠른 매칭 — preferred_game(A) / None=any(B) 규칙으로 짝지음."""
+    """게스트 빠른 매칭 — preferred_game(A) / None=any(B) 규칙으로 짝지음.
 
-    def __init__(self, room_manager: RoomManager) -> None:
-        self._manager = room_manager
+    게임마다 방 생성 방식(및 상태 저장소)이 다르므로, 매칭이 성사된
+    게임 id에 맞는 방 생성 함수를 `room_factories`에서 찾는다. 목록에
+    없는 game_id(향후 추가될 게임 등)는 `default_factory`(오목 방)로
+    처리해 기존 동작을 그대로 유지한다.
+    """
+
+    def __init__(
+        self,
+        room_factories: dict[str, Callable[[], str]],
+        default_factory: Callable[[], str],
+    ) -> None:
+        self._room_factories = room_factories
+        self._default_factory = default_factory
         self._lock = asyncio.Lock()
         self._waiting: list[QueueEntry] = []
 
@@ -331,7 +342,8 @@ class MatchQueue:
                 if game_id is None:
                     continue
                 self._waiting.pop(i)
-                room_id = self._manager.create_room()
+                factory = self._room_factories.get(game_id, self._default_factory)
+                room_id = factory()
                 result = (room_id, game_id)
                 if not other.future.done():
                     other.future.set_result(result)
@@ -352,6 +364,3 @@ class MatchQueue:
                 else:
                     kept.append(entry)
             self._waiting = kept
-
-
-quick_queue = MatchQueue(manager)

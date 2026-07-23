@@ -10,12 +10,14 @@
 extends Control
 
 const BlackWhiteMatchScript := preload("res://scripts/black_white_match.gd")
+const NetworkClientScript := preload("res://scripts/network_client.gd")
 const TILE_COUNT := 9
 const PLAYER_NAMES := ["플레이어 1", "플레이어 2"]
 const TILE_SIZE := Vector2(100, 138)
 const STAGE_SIZE := Vector2(64, 88)
 const TILE_SEP := 8
 
+@onready var status_label: Label = $RootMargin/VBox/TopBar/StatusLabel
 @onready var score_label: Label = $RootMargin/VBox/TitleBlock/ScoreLabel
 @onready var round_label: Label = $RootMargin/VBox/TitleBlock/RoundLabel
 @onready var prompt_label: Label = $RootMargin/VBox/PromptLabel
@@ -65,6 +67,19 @@ var _pending_starter: int = 0
 var _pass_continue_action: Callable = Callable()
 var _result_token: int = 0
 
+# ── 온라인(랜덤매칭) 상태 ────────────────────────────────────────
+# 온라인에서는 bw_match를 쓰지 않고, 서버가 보내주는 bw_state를 그대로
+# 화면에 반영한다. 상대의 실제 숫자는 절대 클라이언트로 전달되지 않으며
+# (색만 전달됨), 매치 종료 후에도 공개되지 않는다.
+var online: bool = false
+var net: Node = null
+var my_index: int = -1
+var _online_arrangement: Array = []
+var _online_last_state: Dictionary = {}
+var _online_segment_shown: int = -1
+var _online_last_result_key: String = ""
+var _online_history: Array = []
+
 
 func _ready() -> void:
 	_style_overlay_panel(pass_panel)
@@ -76,7 +91,13 @@ func _ready() -> void:
 	_style_overlay_label(result_detail_label)
 	_style_overlay_label(end_title_label)
 	_style_overlay_label(end_score_label)
-	_start_new_match()
+
+	online = GameSession.mode == GameSession.Mode.ONLINE or GameSession.mode == GameSession.Mode.QUICK
+	if online:
+		status_label.visible = true
+		_start_online()
+	else:
+		_start_new_match()
 
 
 func _style_overlay_panel(panel: PanelContainer) -> void:
@@ -150,6 +171,21 @@ func _make_tile_view(value: int, show_number: bool, size: Vector2) -> Control:
 	return panel
 
 
+## 값을 모르고 색만 아는 경우(온라인에서 상대 타일)에 쓰는 뒷면 뷰.
+func _make_color_tile_view(color_name: String, size: Vector2) -> Control:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = size
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var black := color_name == "black"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.09, 1) if black else Color(0.94, 0.94, 0.95, 1)
+	style.set_corner_radius_all(8)
+	style.border_color = Color(0.45, 0.45, 0.50, 1)
+	style.set_border_width_all(1)
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
+
+
 func _make_gap(size: Vector2) -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = size
@@ -168,10 +204,16 @@ func _clear_container(container: Node) -> void:
 		child.queue_free()
 
 
-func _fill_stage(slot_container: Control, value: int, owner_label: Label, player: int) -> void:
+func _fill_stage_value(slot_container: Control, value: int, owner_label: Label, name_text: String) -> void:
 	_clear_container(slot_container)
 	slot_container.add_child(_make_tile_view(value, false, STAGE_SIZE))
-	owner_label.text = "%s의 카드" % PLAYER_NAMES[player]
+	owner_label.text = "%s의 카드" % name_text
+
+
+func _fill_stage_color(slot_container: Control, color_name: String, owner_label: Label, name_text: String) -> void:
+	_clear_container(slot_container)
+	slot_container.add_child(_make_color_tile_view(color_name, STAGE_SIZE))
+	owner_label.text = "%s의 카드" % name_text
 
 
 func _clear_staging() -> void:
@@ -182,7 +224,10 @@ func _clear_staging() -> void:
 
 
 ## 팝업이 떠 있는 동안 뒤의 숫자만 숨긴다(색은 유지). 검정 전체 가림막은 쓰지 않음.
+## 온라인에서는 기기를 공유하지 않으므로(각자 자기 화면) 적용하지 않는다.
 func _hide_visible_numbers() -> void:
+	if online:
+		return
 	if _phase == Phase.ARRANGE:
 		_clear_container(hand_row)
 		for slot in range(TILE_COUNT):
@@ -255,6 +300,13 @@ func _on_arrange_tile_pressed(slot: int) -> void:
 
 func _on_arrange_done_pressed() -> void:
 	arrange_button_row.visible = false
+	if online:
+		if net:
+			net.send_bw_arrange(_online_arrangement)
+		status_label.text = "배치를 서버로 전송했습니다."
+		prompt_label.text = "상대가 타일을 배치할 때까지 기다려 주세요…"
+		_clear_container(hand_row)
+		return
 	if _arranging_player == 0:
 		_show_pass(
 			"%s 님, 화면을 %s 님에게 넘겨주세요." % [PLAYER_NAMES[0], PLAYER_NAMES[1]],
@@ -309,7 +361,7 @@ func _on_hand_tile_pressed(slot: int) -> void:
 	if not bw_match.has_pending_first():
 		bw_match.commit_first(slot)
 		var acting_player := current_actor
-		_fill_stage(first_stage_slot, bw_match.staged_first_value(), first_stage_label, acting_player)
+		_fill_stage_value(first_stage_slot, bw_match.staged_first_value(), first_stage_label, PLAYER_NAMES[acting_player])
 		var next_actor := bw_match.other(current_actor)
 		_show_pass(
 			"%s 님, 화면을 %s 님에게 넘겨주세요." % [PLAYER_NAMES[acting_player], PLAYER_NAMES[next_actor]],
@@ -320,7 +372,10 @@ func _on_hand_tile_pressed(slot: int) -> void:
 	else:
 		var acting_player := current_actor
 		var record := bw_match.commit_second(slot)
-		_fill_stage(second_stage_slot, int(record["second_tile"]), second_stage_label, acting_player)
+		_fill_stage_value(second_stage_slot, int(record["second_tile"]), second_stage_label, PLAYER_NAMES[acting_player])
+		# 후공이 낸 슬롯은 바로 빈 칸으로 (결과 팝업 떠 있는 동안에도 유지).
+		_rebuild_row(hand_row, acting_player, false)
+		_rebuild_row(opponent_row, bw_match.other(acting_player), false)
 		_show_result(record)
 
 
@@ -395,6 +450,12 @@ func _on_result_next_pressed() -> void:
 	result_overlay.visible = false
 	result_next_button.visible = true
 	_clear_staging()
+	if online:
+		if bool(_online_last_state.get("is_over", false)):
+			_show_online_match_end(_online_last_state)
+		else:
+			_render_online_round(_online_last_state)
+		return
 	if bw_match.is_over():
 		_show_match_end()
 		return
@@ -406,12 +467,16 @@ func _show_match_end() -> void:
 	_clear_container(end_history_list)
 	for record: Dictionary in bw_match.history:
 		var line := Label.new()
-		var w: int = record["winner"]
-		var outcome := "무승부" if w < 0 else "%s 승" % PLAYER_NAMES[w]
-		line.text = "R%d — %s: %d vs %s: %d → %s" % [
+		var starter: int = int(record["starter"])
+		var second: int = bw_match.other(starter)
+		var w: int = int(record["winner"])
+		var outcome := "무승부"
+		if w >= 0:
+			outcome = "%s 승" % PLAYER_NAMES[w]
+		line.text = "R%d - %s %d vs %d %s -> %s" % [
 			int(record["round"]) + 1,
-			PLAYER_NAMES[record["starter"]], record["starter_tile"],
-			PLAYER_NAMES[bw_match.other(record["starter"])], record["second_tile"],
+			PLAYER_NAMES[starter], int(record["starter_tile"]),
+			int(record["second_tile"]), PLAYER_NAMES[second],
 			outcome,
 		]
 		line.add_theme_font_size_override("font_size", 13)
@@ -432,10 +497,17 @@ func _show_match_end() -> void:
 
 func _on_rematch_pressed() -> void:
 	end_overlay.visible = false
+	if online:
+		if net:
+			net.send_bw_rematch()
+		status_label.text = "다음 판을 준비하는 중…"
+		return
 	_start_new_match()
 
 
 func _on_lobby_pressed() -> void:
+	if online and net != null and is_instance_valid(net) and net != GameSession.net:
+		net.disconnect_from_room()
 	GameSession.reset_to_local()
 	get_tree().change_scene_to_file("res://ui/genius_lobby.tscn")
 
@@ -455,3 +527,399 @@ func _on_rules_close_pressed() -> void:
 func _on_rules_dimmer_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		rules_overlay.visible = false
+
+
+# ── 온라인(랜덤매칭) ─────────────────────────────────────────────
+# 서버가 상태의 유일한 권위자다. 클라이언트는 자기 배치를 보내고,
+# 서버가 보내주는 bw_state(내 손패 값 + 상대 손패는 "색만")를 그대로
+# 그린다. 라운드 결과도 승/무만 오고, 실제 숫자는 절대 오지 않는다.
+
+func _start_online() -> void:
+	bw_match = null
+	my_index = -1
+	_online_arrangement.clear()
+	_online_segment_shown = -1
+	_online_last_result_key = ""
+	_online_history.clear()
+	_clear_staging()
+	status_label.text = "서버 연결 중…"
+	prompt_label.text = ""
+	opponent_section.visible = false
+	staging_row.visible = false
+	score_label.visible = false
+	round_label.visible = false
+	arrange_button_row.visible = false
+	_start_network()
+
+
+func _start_network() -> void:
+	if GameSession.net != null and is_instance_valid(GameSession.net):
+		net = GameSession.net
+		net.message.connect(_on_net_message)
+		net.disconnected.connect(_on_net_disconnected)
+		status_label.text = "동기화 중…"
+		for pending in GameSession.take_pending_messages():
+			_on_net_message(pending)
+		return
+
+	net = NetworkClientScript.new()
+	add_child(net)
+	net.message.connect(_on_net_message)
+	net.disconnected.connect(_on_net_disconnected)
+	net.connected.connect(func() -> void:
+		status_label.text = "연결됨 — 상대 대기 중…"
+	)
+	var url := GameSession.quick_ws_url() if GameSession.mode == GameSession.Mode.QUICK else GameSession.ws_url()
+	net.connect_to_room(url)
+
+
+func _online_name(idx: int) -> String:
+	return "나" if idx == my_index else "상대"
+
+
+func _on_net_message(data: Dictionary) -> void:
+	var t := str(data.get("type", ""))
+	match t:
+		"queued":
+			status_label.text = "상대를 찾는 중…"
+		"matched":
+			GameSession.room_id = str(data.get("room_id", ""))
+			status_label.text = "매칭 완료! 입장 중…"
+		"bw_joined":
+			my_index = int(data.get("you", -1))
+			GameSession.my_color = my_index
+			status_label.text = "방 %s" % GameSession.room_id
+		"bw_waiting":
+			status_label.text = "상대를 기다리는 중… (방 코드: %s)" % GameSession.room_id
+			prompt_label.text = "상대를 기다리는 중입니다…"
+			opponent_section.visible = false
+			staging_row.visible = false
+			score_label.visible = false
+			round_label.visible = false
+			arrange_button_row.visible = false
+			_clear_container(hand_row)
+		"bw_wait_arrange":
+			status_label.text = "상대의 배치를 기다리는 중…"
+			prompt_label.text = "상대가 타일을 배치할 때까지 기다려 주세요…"
+		"bw_state":
+			_apply_online_state(data)
+		"bw_opponent_left":
+			status_label.text = "상대가 나갔습니다. 새 상대를 기다립니다…"
+			prompt_label.text = "상대가 나갔습니다. 새 상대를 기다리는 중입니다…"
+			opponent_section.visible = false
+			staging_row.visible = false
+			score_label.visible = false
+			round_label.visible = false
+			arrange_button_row.visible = false
+			_clear_container(hand_row)
+		"error":
+			status_label.text = "오류: %s" % str(data.get("message", ""))
+		"pong":
+			pass
+		_:
+			pass
+
+
+func _on_net_disconnected() -> void:
+	if not online:
+		return
+	status_label.text = "서버 연결이 끊겼습니다."
+
+
+func _apply_online_state(data: Dictionary) -> void:
+	var seg: int = int(data.get("segment", 0))
+	if seg != _online_segment_shown:
+		_online_segment_shown = seg
+		_online_history.clear()
+		_online_last_result_key = ""
+
+	_online_last_state = data
+	my_index = int(data.get("you", my_index))
+	status_label.text = "방 %s" % GameSession.room_id
+
+	if not bool(data.get("arranged", false)):
+		_show_online_arrange_phase()
+		return
+
+	arrange_button_row.visible = false
+	opponent_section.visible = true
+	staging_row.visible = true
+	score_label.visible = true
+	round_label.visible = true
+
+	if not bool(data.get("opp_arranged", false)):
+		prompt_label.text = "상대가 타일을 배치할 때까지 기다려 주세요…"
+		_render_online_round(data)
+		return
+
+	var last_result: Variant = data.get("last_result", null)
+	if typeof(last_result) == TYPE_DICTIONARY:
+		var key := "%d:%d" % [seg, int(last_result.get("round", -1))]
+		if key != _online_last_result_key:
+			_online_last_result_key = key
+			_record_online_history(last_result, data)
+			_show_online_result(data)
+			return
+
+	_render_online_round(data)
+
+
+func _show_online_arrange_phase() -> void:
+	_phase = Phase.ARRANGE
+	if _online_arrangement.is_empty():
+		_online_arrangement = range(TILE_COUNT)
+	_swap_selected_slot = -1
+	arrange_button_row.visible = true
+	opponent_section.visible = false
+	staging_row.visible = false
+	score_label.visible = false
+	round_label.visible = false
+	hand_title_label.text = "내 타일 배치"
+	prompt_label.text = "원하는 순서로 배치하세요. 바꿀 타일 두 장을 순서대로 탭하면 위치가 바뀝니다."
+	_rebuild_online_arrange_row()
+
+
+func _rebuild_online_arrange_row() -> void:
+	_clear_container(hand_row)
+	for slot in range(TILE_COUNT):
+		var value: int = _online_arrangement[slot]
+		var tile := _make_tile_button(value, TILE_SIZE)
+		if slot == _swap_selected_slot:
+			tile.modulate = Color(1.0, 0.82, 0.42, 1)
+		tile.pressed.connect(_on_online_arrange_tile_pressed.bind(slot))
+		hand_row.add_child(tile)
+
+
+func _on_online_arrange_tile_pressed(slot: int) -> void:
+	if _swap_selected_slot < 0:
+		_swap_selected_slot = slot
+	elif _swap_selected_slot == slot:
+		_swap_selected_slot = -1
+	else:
+		var tmp = _online_arrangement[_swap_selected_slot]
+		_online_arrangement[_swap_selected_slot] = _online_arrangement[slot]
+		_online_arrangement[slot] = tmp
+		_swap_selected_slot = -1
+	_rebuild_online_arrange_row()
+
+
+func _render_online_round(data: Dictionary) -> void:
+	var round_index: int = int(data.get("round_index", 0))
+	var scores: Array = data.get("scores", [0, 0])
+	var turn := str(data.get("turn", ""))
+
+	round_label.text = "라운드 %d / %d" % [round_index + 1, TILE_COUNT]
+	score_label.text = "%d : %d" % [scores[0], scores[1]]
+	hand_title_label.text = "내 타일"
+
+	if turn == "first":
+		prompt_label.text = "낼 타일을 선택하세요. (선)"
+	elif turn == "second":
+		prompt_label.text = "낼 타일을 선택하세요. (후)"
+	else:
+		prompt_label.text = "상대의 차례입니다. 기다려 주세요…"
+
+	_rebuild_online_row(hand_row, data.get("my_hand", []), turn == "first" or turn == "second")
+	_rebuild_online_opp_row(opponent_row, data.get("opp_hand", []))
+	_refresh_online_staging(data)
+
+
+func _rebuild_online_row(container: Container, hand_arr: Array, interactive: bool) -> void:
+	_clear_container(container)
+	for entry: Dictionary in hand_arr:
+		var slot: int = int(entry.get("slot", 0))
+		var used: bool = bool(entry.get("used", false))
+		if used:
+			container.add_child(_make_gap(TILE_SIZE))
+			continue
+		var value: int = int(entry.get("value", 0))
+		if interactive:
+			var btn := _make_tile_button(value, TILE_SIZE)
+			btn.pressed.connect(_on_online_tile_pressed.bind(slot))
+			container.add_child(btn)
+		else:
+			container.add_child(_make_tile_view(value, true, TILE_SIZE))
+
+
+func _rebuild_online_opp_row(container: Container, hand_arr: Array) -> void:
+	_clear_container(container)
+	for entry: Dictionary in hand_arr:
+		var used: bool = bool(entry.get("used", false))
+		if used:
+			container.add_child(_make_gap(TILE_SIZE))
+			continue
+		var color := str(entry.get("color", "black"))
+		container.add_child(_make_color_tile_view(color, TILE_SIZE))
+
+
+func _refresh_online_staging(data: Dictionary) -> void:
+	_clear_staging()
+	var pending_slot: int = int(data.get("pending_first_slot", -1))
+	if pending_slot < 0:
+		return
+	var starter: int = int(data.get("starter", 0))
+	var color_name := _online_color_for(starter, pending_slot, data)
+	_fill_stage_color(first_stage_slot, color_name, first_stage_label, _online_name(starter))
+
+
+func _online_color_for(player_idx: int, slot: int, data: Dictionary) -> String:
+	if slot < 0:
+		return "black"
+	if player_idx == my_index:
+		for entry: Dictionary in data.get("my_hand", []):
+			if int(entry.get("slot", -1)) == slot:
+				return "black" if BlackWhiteMatchScript.is_black(int(entry.get("value", 0))) else "white"
+	else:
+		for entry: Dictionary in data.get("opp_hand", []):
+			if int(entry.get("slot", -1)) == slot:
+				return str(entry.get("color", "black"))
+	return "black"
+
+
+func _on_online_tile_pressed(slot: int) -> void:
+	if net == null:
+		return
+	net.send_bw_play(slot)
+
+
+func _show_online_result(data: Dictionary) -> void:
+	var last_result: Dictionary = data.get("last_result", {})
+	var starter: int = int(last_result.get("starter", 0))
+	var second: int = 1 - starter
+	var starter_slot: int = int(last_result.get("starter_slot", -1))
+	var second_slot: int = int(last_result.get("second_slot", -1))
+	var winner: int = int(last_result.get("winner", -1))
+
+	# 후공 제출 직후 손패/상대 행에서 낸 슬롯을 바로 빈 칸으로 반영.
+	_rebuild_online_row(hand_row, data.get("my_hand", []), false)
+	_rebuild_online_opp_row(opponent_row, data.get("opp_hand", []))
+	score_label.text = "%d : %d" % [
+		int(data.get("scores", [0, 0])[0]),
+		int(data.get("scores", [0, 0])[1]),
+	]
+
+	_fill_stage_color(
+		first_stage_slot,
+		_online_color_for(starter, starter_slot, data),
+		first_stage_label,
+		_online_name(starter)
+	)
+	_fill_stage_color(
+		second_stage_slot,
+		_online_color_for(second, second_slot, data),
+		second_stage_label,
+		_online_name(second)
+	)
+
+	_result_token += 1
+	var token := _result_token
+	result_next_button.visible = false
+	result_label.text = "모두 카드를 냈습니다.\n승패를 공개합니다."
+	result_detail_label.text = ""
+	result_overlay.visible = true
+
+	for n in range(3, 0, -1):
+		if token != _result_token or not is_instance_valid(self):
+			return
+		result_detail_label.text = str(n)
+		await get_tree().create_timer(1.0).timeout
+
+	if token != _result_token or not is_instance_valid(self):
+		return
+
+	var scores: Array = data.get("scores", [0, 0])
+	if bool(data.get("is_over", false)):
+		if bool(data.get("is_tie", false)):
+			result_label.text = "동점!"
+			result_detail_label.text = "연장전을 진행합니다.\n점수 %d : %d" % [scores[0], scores[1]]
+		else:
+			var seg_winner := 0 if scores[0] > scores[1] else 1
+			result_label.text = "%s 승!" % _online_name(seg_winner)
+			result_detail_label.text = "데스매치 종료\n점수 %d : %d" % [scores[0], scores[1]]
+		result_next_button.text = "결과 보기"
+	else:
+		if winner < 0:
+			result_label.text = "무승부!"
+		else:
+			result_label.text = "%s 승!" % _online_name(winner)
+		result_detail_label.text = "점수 %d : %d" % [scores[0], scores[1]]
+		result_next_button.text = "다음 라운드"
+	result_next_button.visible = true
+
+
+func _record_online_history(last_result: Dictionary, data: Dictionary) -> void:
+	# 진행 중에는 내 숫자만 기억. 종료 시 서버 reveal로 상대 숫자를 채운다.
+	var starter: int = int(last_result.get("starter", 0))
+	var my_role_starter := starter == my_index
+	var my_slot: int = int(last_result.get("starter_slot", -1)) if my_role_starter else int(last_result.get("second_slot", -1))
+	var my_value := -1
+	for entry: Dictionary in data.get("my_hand", []):
+		if int(entry.get("slot", -1)) == my_slot:
+			my_value = int(entry.get("value", -1))
+			break
+	_online_history.append({
+		"round": int(last_result.get("round", 0)),
+		"my_role_starter": my_role_starter,
+		"my_value": my_value,
+		"opp_value": -1,
+		"winner": int(last_result.get("winner", -1)),
+	})
+
+
+func _apply_reveal_to_history(data: Dictionary) -> void:
+	var reveal: Array = data.get("reveal", [])
+	if reveal.is_empty():
+		return
+	_online_history.clear()
+	for record: Dictionary in reveal:
+		var starter: int = int(record.get("starter", 0))
+		var my_role_starter := starter == my_index
+		var my_value: int
+		var opp_value: int
+		if my_role_starter:
+			my_value = int(record.get("starter_tile", -1))
+			opp_value = int(record.get("second_tile", -1))
+		else:
+			my_value = int(record.get("second_tile", -1))
+			opp_value = int(record.get("starter_tile", -1))
+		_online_history.append({
+			"round": int(record.get("round", 0)),
+			"my_role_starter": my_role_starter,
+			"my_value": my_value,
+			"opp_value": opp_value,
+			"winner": int(record.get("winner", -1)),
+		})
+
+
+func _show_online_match_end(data: Dictionary) -> void:
+	_apply_reveal_to_history(data)
+	_clear_container(end_history_list)
+	for record: Dictionary in _online_history:
+		var w: int = int(record.get("winner", -1))
+		var outcome := "무승부"
+		if w == my_index:
+			outcome = "승"
+		elif w >= 0:
+			outcome = "패"
+		var line := Label.new()
+		line.text = "R%d - 나 %d vs %d 상대 -> %s" % [
+			int(record.get("round", 0)) + 1,
+			int(record.get("my_value", -1)),
+			int(record.get("opp_value", -1)),
+			outcome,
+		]
+		line.add_theme_font_size_override("font_size", 13)
+		end_history_list.add_child(line)
+
+	var scores: Array = data.get("scores", [0, 0])
+	var my_score: int = scores[my_index] if my_index >= 0 and my_index < scores.size() else scores[0]
+	var opp_score: int = scores[1 - my_index] if my_index >= 0 and my_index < scores.size() else scores[1]
+	if bool(data.get("is_tie", false)):
+		end_title_label.text = "동점! 연장전을 진행합니다."
+		rematch_button.text = "연장전 시작"
+	else:
+		var w := 0 if scores[0] > scores[1] else 1
+		end_title_label.text = "%s 승리!" % _online_name(w)
+		rematch_button.text = "다시 시작"
+	end_score_label.text = "최종 점수 — 나 %d : %d 상대" % [my_score, opp_score]
+	end_overlay.visible = true

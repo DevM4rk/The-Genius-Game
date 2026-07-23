@@ -50,6 +50,13 @@ theme_override_constants/separation = 12
 layout_mode = 2
 text = "← 로비"
 
+[node name="StatusLabel" type="Label" parent="RootMargin/VBox/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.40, 0.35, 0.28, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+visible = false
+
 [node name="Spacer" type="Control" parent="RootMargin/VBox/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3

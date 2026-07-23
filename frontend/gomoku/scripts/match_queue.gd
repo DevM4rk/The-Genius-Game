@@ -58,6 +58,13 @@ func _on_net_message(data: Dictionary) -> void:
 				_try_enter_board()
 			elif t == "error":
 				status_label.text = "오류: %s" % str(data.get("message", ""))
+		"bw_joined", "bw_waiting", "bw_wait_arrange", "bw_state", "bw_opponent_left":
+			# 흑과백은 game_start가 없다 — 양쪽 모두 방에 들어오면 오는
+			# bw_state가 오목의 game_start와 같은 "준비 완료" 신호다.
+			GameSession.pending_net_messages.append(data)
+			if t == "bw_state":
+				_ready_for_board = true
+				_try_enter_board()
 		_:
 			GameSession.pending_net_messages.append(data)
 
