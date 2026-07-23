@@ -13,7 +13,7 @@ const BlackWhiteMatchScript := preload("res://scripts/black_white_match.gd")
 const TILE_COUNT := 9
 const PLAYER_NAMES := ["플레이어 1", "플레이어 2"]
 const TILE_SIZE := Vector2(100, 138)
-const STAGE_SIZE := Vector2(56, 78)
+const STAGE_SIZE := Vector2(64, 88)
 const TILE_SEP := 8
 
 @onready var score_label: Label = $RootMargin/VBox/TitleBlock/ScoreLabel
@@ -22,8 +22,10 @@ const TILE_SEP := 8
 @onready var opponent_section: VBoxContainer = $RootMargin/VBox/OpponentSection
 @onready var opponent_row: HBoxContainer = $RootMargin/VBox/OpponentSection/OpponentRow
 @onready var staging_row: HBoxContainer = $RootMargin/VBox/StagingRow
-@onready var first_stage_slot: Control = $RootMargin/VBox/StagingRow/FirstStageSlot
-@onready var second_stage_slot: Control = $RootMargin/VBox/StagingRow/SecondStageSlot
+@onready var first_stage_slot: Control = $RootMargin/VBox/StagingRow/FirstStageCol/FirstStageSlot
+@onready var first_stage_label: Label = $RootMargin/VBox/StagingRow/FirstStageCol/FirstStageLabel
+@onready var second_stage_slot: Control = $RootMargin/VBox/StagingRow/SecondStageCol/SecondStageSlot
+@onready var second_stage_label: Label = $RootMargin/VBox/StagingRow/SecondStageCol/SecondStageLabel
 @onready var hand_title_label: Label = $RootMargin/VBox/HandSection/HandTitleLabel
 @onready var hand_row: HBoxContainer = $RootMargin/VBox/HandSection/HandRow
 @onready var arrange_button_row: CenterContainer = $RootMargin/VBox/ArrangeButtonRow
@@ -69,16 +71,31 @@ func _ready() -> void:
 	_style_overlay_panel(result_panel)
 	_style_overlay_panel(end_panel)
 	_style_overlay_panel(rules_panel)
+	_style_overlay_label(pass_label)
+	_style_overlay_label(result_label)
+	_style_overlay_label(result_detail_label)
+	_style_overlay_label(end_title_label)
+	_style_overlay_label(end_score_label)
 	_start_new_match()
 
 
 func _style_overlay_panel(panel: PanelContainer) -> void:
+	if panel == null:
+		push_error("overlay panel missing in black_white_board.tscn")
+		return
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.14, 0.15, 0.18, 1)
+	# 배경은 비치게, 글씨는 패널 위에서 읽히게.
+	style.bg_color = Color(0.10, 0.11, 0.14, 0.62)
 	style.set_corner_radius_all(14)
-	style.border_color = Color(0.35, 0.37, 0.42, 1)
+	style.border_color = Color(1, 1, 1, 0.28)
 	style.set_border_width_all(1)
 	panel.add_theme_stylebox_override("panel", style)
+
+
+func _style_overlay_label(label: Label) -> void:
+	label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.99, 1))
+	label.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.07, 0.95))
+	label.add_theme_constant_override("outline_size", 6)
 
 
 # ── 타일 시각 요소 ──────────────────────────────────────────────
@@ -151,14 +168,33 @@ func _clear_container(container: Node) -> void:
 		child.queue_free()
 
 
-func _fill_stage(slot_container: Control, value: int) -> void:
+func _fill_stage(slot_container: Control, value: int, owner_label: Label, player: int) -> void:
 	_clear_container(slot_container)
 	slot_container.add_child(_make_tile_view(value, false, STAGE_SIZE))
+	owner_label.text = "%s의 카드" % PLAYER_NAMES[player]
 
 
 func _clear_staging() -> void:
 	_clear_container(first_stage_slot)
 	_clear_container(second_stage_slot)
+	first_stage_label.text = ""
+	second_stage_label.text = ""
+
+
+## 팝업이 떠 있는 동안 뒤의 숫자만 숨긴다(색은 유지). 검정 전체 가림막은 쓰지 않음.
+func _hide_visible_numbers() -> void:
+	if _phase == Phase.ARRANGE:
+		_clear_container(hand_row)
+		for slot in range(TILE_COUNT):
+			var value: int = _arrangement_draft[_arranging_player][slot]
+			hand_row.add_child(_make_tile_view(value, false, TILE_SIZE))
+		return
+	if bw_match == null:
+		_clear_container(hand_row)
+		_clear_container(opponent_row)
+		return
+	_rebuild_row(hand_row, current_actor, false)
+	_rebuild_row(opponent_row, bw_match.other(current_actor), false)
 
 
 # ── 매치 시작 / 배치 단계 ──────────────────────────────────────
@@ -272,8 +308,8 @@ func _rebuild_row(container: Container, player: int, mine: bool) -> void:
 func _on_hand_tile_pressed(slot: int) -> void:
 	if not bw_match.has_pending_first():
 		bw_match.commit_first(slot)
-		_fill_stage(first_stage_slot, bw_match.staged_first_value())
 		var acting_player := current_actor
+		_fill_stage(first_stage_slot, bw_match.staged_first_value(), first_stage_label, acting_player)
 		var next_actor := bw_match.other(current_actor)
 		_show_pass(
 			"%s 님, 화면을 %s 님에게 넘겨주세요." % [PLAYER_NAMES[acting_player], PLAYER_NAMES[next_actor]],
@@ -282,17 +318,15 @@ func _on_hand_tile_pressed(slot: int) -> void:
 				_refresh_round_ui()
 		)
 	else:
+		var acting_player := current_actor
 		var record := bw_match.commit_second(slot)
-		_fill_stage(second_stage_slot, int(record["second_tile"]))
+		_fill_stage(second_stage_slot, int(record["second_tile"]), second_stage_label, acting_player)
 		_show_result(record)
 
 
 func _show_pass(text: String, action: Callable) -> void:
-	# 화면 넘김 중에는 뒤의 숫자 타일이 비치지 않도록 즉시 가린다.
-	_clear_container(hand_row)
-	_clear_container(opponent_row)
-	hand_title_label.text = ""
-	prompt_label.text = ""
+	# 검정 전체 화면 대신, 숫자만 숨기고 팝업만 띄운다.
+	_hide_visible_numbers()
 	arrange_button_row.visible = false
 	pass_label.text = text
 	_pass_continue_action = action
@@ -310,6 +344,7 @@ func _on_pass_continue_pressed() -> void:
 func _show_result(record: Dictionary) -> void:
 	_result_token += 1
 	var token := _result_token
+	_hide_visible_numbers()
 	result_next_button.visible = false
 	result_label.text = "모두 카드를 냈습니다.\n승패를 공개합니다."
 	result_detail_label.text = ""

@@ -64,6 +64,20 @@ func quick_ws_url() -> String:
 	return "%s/ws/quick?game=%s" % [server_ws, g.uri_encode()]
 
 
+func apply_server_urls() -> void:
+	# 데스크톱: 기본 127.0.0.1 유지. 웹: 같은 오리진.
+	if not OS.has_feature("web"):
+		return
+	var origin := str(JavaScriptBridge.eval("window.location.origin", true)).strip_edges().trim_suffix("/")
+	if origin.is_empty() or origin == "null":
+		return
+	server_http = origin
+	if origin.begins_with("https://"):
+		server_ws = "wss://" + origin.substr(8)
+	elif origin.begins_with("http://"):
+		server_ws = "ws://" + origin.substr(7)
+
+
 func adopt_net(node: Node) -> void:
 	if net != null and is_instance_valid(net) and net != node:
 		if net.has_method("disconnect_from_room"):

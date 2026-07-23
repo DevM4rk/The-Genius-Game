@@ -56,16 +56,7 @@ func _style_primary_button(btn: Button) -> void:
 
 
 func _configure_server_urls() -> void:
-	if not OS.has_feature("web"):
-		return
-	var origin := str(JavaScriptBridge.eval("window.location.origin", true)).strip_edges().trim_suffix("/")
-	if origin.is_empty() or origin == "null":
-		return
-	GameSession.server_http = origin
-	if origin.begins_with("https://"):
-		GameSession.server_ws = "wss://" + origin.substr(8)
-	elif origin.begins_with("http://"):
-		GameSession.server_ws = "ws://" + origin.substr(7)
+	GameSession.apply_server_urls()
 
 
 func _on_rules_pressed() -> void:
