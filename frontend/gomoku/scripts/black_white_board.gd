@@ -33,9 +33,10 @@ const PLAYER_NAMES := ["플레이어 1", "플레이어 2"]
 @onready var end_history_list: VBoxContainer = $MatchEndOverlay/Panel/Margin/VBox/HistoryScroll/HistoryList
 @onready var rematch_button: Button = $MatchEndOverlay/Panel/Margin/VBox/ButtonsRow/RematchButton
 
-var match: BlackWhiteMatch
+var bw_match: BlackWhiteMatch
 var current_actor: int = 0
 var pending_first_value: int = -1
+var _is_first_segment: bool = true
 ## 개인 메모용 표시(참고 범례 탭) — 게임 로직에는 영향 없음.
 var eliminated_marks: Dictionary = {}
 
@@ -58,8 +59,15 @@ func _style_overlay_panel(panel: PanelContainer) -> void:
 
 func _start_new_match() -> void:
 	eliminated_marks.clear()
-	match = BlackWhiteMatchScript.new(randi() % 2)
-	current_actor = match.starter
+	var starter: int
+	if _is_first_segment:
+		# 혼자하기 팝업의 선/후 토글: true면 플레이어 1이 1라운드 선.
+		starter = 0 if GameSession.prefer_first else 1
+		_is_first_segment = false
+	else:
+		starter = randi() % 2  # 연장전 선공은 매번 새로 무작위 결정.
+	bw_match = BlackWhiteMatchScript.new(starter)
+	current_actor = bw_match.starter
 	pending_first_value = -1
 	_build_legend_row()
 	_refresh_round_ui()
@@ -109,8 +117,8 @@ func _make_tile_button(value: int, show_number: bool) -> Button:
 
 
 func _refresh_round_ui() -> void:
-	round_label.text = "라운드 %d / %d" % [match.round_index + 1, TILE_COUNT]
-	score_label.text = "%d : %d" % [match.scores[0], match.scores[1]]
+	round_label.text = "라운드 %d / %d" % [bw_match.round_index + 1, TILE_COUNT]
+	score_label.text = "%d : %d" % [bw_match.scores[0], bw_match.scores[1]]
 	_rebuild_hand_row()
 	var role := "선" if pending_first_value < 0 else "후"
 	hand_title_label.text = "%s 의 타일 (%s)" % [PLAYER_NAMES[current_actor], role]
@@ -120,7 +128,7 @@ func _refresh_round_ui() -> void:
 func _rebuild_hand_row() -> void:
 	for child in hand_row.get_children():
 		child.queue_free()
-	for value in match.hands[current_actor]:
+	for value in bw_match.hands[current_actor]:
 		var tile := _make_tile_button(value, true)
 		tile.pressed.connect(_on_hand_tile_pressed.bind(value))
 		hand_row.add_child(tile)
@@ -129,7 +137,7 @@ func _rebuild_hand_row() -> void:
 func _on_hand_tile_pressed(value: int) -> void:
 	if pending_first_value < 0:
 		pending_first_value = value
-		var next_actor := match.other(current_actor)
+		var next_actor := bw_match.other(current_actor)
 		pass_label.text = "%s 님, 화면을 %s 님에게 넘겨주세요." % [
 			PLAYER_NAMES[current_actor], PLAYER_NAMES[next_actor]
 		]
@@ -139,7 +147,7 @@ func _on_hand_tile_pressed(value: int) -> void:
 		var first_value := pending_first_value
 		var second_value := value
 		pending_first_value = -1
-		var record := match.play_round(first_value, second_value)
+		var record := bw_match.play_round(first_value, second_value)
 		_show_result(record)
 
 
@@ -152,45 +160,45 @@ func _show_result(record: Dictionary) -> void:
 	var winner: int = record["winner"]
 	result_label.text = "무승부" if winner < 0 else "%s 승리!" % PLAYER_NAMES[winner]
 	result_detail_label.text = "점수 — %s %d : %d %s" % [
-		PLAYER_NAMES[0], match.scores[0], match.scores[1], PLAYER_NAMES[1]
+		PLAYER_NAMES[0], bw_match.scores[0], bw_match.scores[1], PLAYER_NAMES[1]
 	]
 	result_overlay.visible = true
 
 
 func _on_result_next_pressed() -> void:
 	result_overlay.visible = false
-	if match.is_over():
+	if bw_match.is_over():
 		_show_match_end()
 		return
-	current_actor = match.starter
+	current_actor = bw_match.starter
 	_refresh_round_ui()
 
 
 func _show_match_end() -> void:
 	for child in end_history_list.get_children():
 		child.queue_free()
-	for record: Dictionary in match.history:
+	for record: Dictionary in bw_match.history:
 		var line := Label.new()
 		var w: int = record["winner"]
 		var outcome := "무승부" if w < 0 else "%s 승" % PLAYER_NAMES[w]
 		line.text = "R%d — %s: %d vs %s: %d → %s" % [
 			int(record["round"]) + 1,
 			PLAYER_NAMES[record["starter"]], record["starter_tile"],
-			PLAYER_NAMES[match.other(record["starter"])], record["second_tile"],
+			PLAYER_NAMES[bw_match.other(record["starter"])], record["second_tile"],
 			outcome,
 		]
 		line.add_theme_font_size_override("font_size", 13)
 		end_history_list.add_child(line)
 
-	if match.is_tie():
+	if bw_match.is_tie():
 		end_title_label.text = "동점! 연장전을 진행합니다."
 		rematch_button.text = "연장전 시작"
 	else:
-		var w := match.segment_winner()
+		var w := bw_match.segment_winner()
 		end_title_label.text = "%s 승리!" % PLAYER_NAMES[w]
 		rematch_button.text = "다시 시작"
 	end_score_label.text = "최종 점수 — %s %d : %d %s" % [
-		PLAYER_NAMES[0], match.scores[0], match.scores[1], PLAYER_NAMES[1]
+		PLAYER_NAMES[0], bw_match.scores[0], bw_match.scores[1], PLAYER_NAMES[1]
 	]
 	end_overlay.visible = true
 

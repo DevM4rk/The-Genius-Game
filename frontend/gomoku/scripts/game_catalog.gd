@@ -20,7 +20,7 @@ const GAMES: Array[Dictionary] = [
 		"scene_path": "res://ui/black_white_board.tscn",
 		"supports_local": true,
 		"supports_ai": false,
-		"supports_turn_choice": false,
+		"supports_turn_choice": true,
 		"rules_text":
 			"두 사람이 0~8 숫자 타일 9장씩(흑: 0·2·4·6·8, 백: 1·3·5·7)을 나눠 갖습니다.\n\n"
 			+ "매 라운드 선(先)이 타일 1장을 낸 뒤 후(後)가 타일을 냅니다. "
