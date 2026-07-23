@@ -1,0 +1,313 @@
+[gd_scene load_steps=3 format=3 uid="uid://black_white_board_001"]
+
+[ext_resource type="Script" path="res://scripts/black_white_board.gd" id="1_script"]
+[ext_resource type="Theme" path="res://theme/lobby_theme.tres" id="2_theme"]
+
+[node name="BlackWhiteBoard" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.10, 1)
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="RootMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TopBar" type="HBoxContainer" parent="RootMargin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="RootMargin/VBox/TopBar"]
+layout_mode = 2
+text = "← 로비"
+
+[node name="RoundLabel" type="Label" parent="RootMargin/VBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 18
+text = "라운드 1 / 9"
+horizontal_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="RootMargin/VBox/TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 0)
+theme_override_colors/font_color = Color(0.92, 0.68, 0.28, 1)
+theme_override_font_sizes/font_size = 22
+text = "0 : 0"
+horizontal_alignment = 2
+
+[node name="PromptLabel" type="Label" parent="RootMargin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="OpponentSection" type="VBoxContainer" parent="RootMargin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OpponentTitleLabel" type="Label" parent="RootMargin/VBox/OpponentSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "참고: 숫자별 색상 (흑=짝수 · 백=홀수) — 탭하면 개인 메모로 표시됩니다"
+autowrap_mode = 3
+
+[node name="OpponentRow" type="HBoxContainer" parent="RootMargin/VBox/OpponentSection"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="Spacer" type="Control" parent="RootMargin/VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="HandSection" type="VBoxContainer" parent="RootMargin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="HandTitleLabel" type="Label" parent="RootMargin/VBox/HandSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="HandRow" type="HBoxContainer" parent="RootMargin/VBox/HandSection"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="PassOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="PassOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.05, 0.85)
+
+[node name="Panel" type="PanelContainer" parent="PassOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -110.0
+offset_right = 220.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="PassOverlay/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="PassOverlay/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="PassOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 18
+text = "화면을 넘겨주세요."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ContinueButton" type="Button" parent="PassOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "준비되면 확인"
+
+[node name="ResultOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="ResultOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.05, 0.85)
+
+[node name="Panel" type="PanelContainer" parent="ResultOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -120.0
+offset_right = 220.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="ResultOverlay/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="ResultOverlay/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResultLabel" type="Label" parent="ResultOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 28
+text = ""
+horizontal_alignment = 1
+
+[node name="ScoreDetailLabel" type="Label" parent="ResultOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.72, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+horizontal_alignment = 1
+
+[node name="NextButton" type="Button" parent="ResultOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "다음 라운드"
+
+[node name="MatchEndOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="MatchEndOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.05, 0.88)
+
+[node name="Panel" type="PanelContainer" parent="MatchEndOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -260.0
+offset_right = 260.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="MatchEndOverlay/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="MatchEndOverlay/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="MatchEndOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.97, 1)
+theme_override_font_sizes/font_size = 24
+text = "데스매치 종료"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="FinalScoreLabel" type="Label" parent="MatchEndOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.68, 0.28, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
+
+[node name="HistoryScroll" type="ScrollContainer" parent="MatchEndOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HistoryList" type="VBoxContainer" parent="MatchEndOverlay/Panel/Margin/VBox/HistoryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ButtonsRow" type="HBoxContainer" parent="MatchEndOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="RematchButton" type="Button" parent="MatchEndOverlay/Panel/Margin/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+text = "다시 시작"
+
+[node name="LobbyButton" type="Button" parent="MatchEndOverlay/Panel/Margin/VBox/ButtonsRow"]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+text = "로비로"
+
+[connection signal="pressed" from="RootMargin/VBox/TopBar/BackButton" to="." method="_on_lobby_pressed"]
+[connection signal="pressed" from="PassOverlay/Panel/Margin/VBox/ContinueButton" to="." method="_on_pass_continue_pressed"]
+[connection signal="pressed" from="ResultOverlay/Panel/Margin/VBox/NextButton" to="." method="_on_result_next_pressed"]
+[connection signal="pressed" from="MatchEndOverlay/Panel/Margin/VBox/ButtonsRow/RematchButton" to="." method="_on_rematch_pressed"]
+[connection signal="pressed" from="MatchEndOverlay/Panel/Margin/VBox/ButtonsRow/LobbyButton" to="." method="_on_lobby_pressed"]
