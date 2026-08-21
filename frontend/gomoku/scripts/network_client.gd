@@ -57,6 +57,46 @@ func send_bw_rematch() -> void:
 	send_dict({"type": "bw_rematch"})
 
 
+func send_nj_arrange_move(piece_id: int, col: int, row: int) -> void:
+	send_dict({"type": "nj_arrange_move", "piece_id": piece_id, "col": col, "row": row})
+
+
+func send_nj_arrange_swap(piece_id_a: int, piece_id_b: int) -> void:
+	send_dict({"type": "nj_arrange_swap", "piece_id_a": piece_id_a, "piece_id_b": piece_id_b})
+
+
+func send_nj_arrange_reset() -> void:
+	send_dict({"type": "nj_arrange_reset"})
+
+
+func send_nj_ready() -> void:
+	send_dict({"type": "nj_ready"})
+
+
+func send_nj_move(piece_id: int, col: int, row: int) -> void:
+	send_dict({"type": "nj_move", "piece_id": piece_id, "col": col, "row": row})
+
+
+func send_nj_item(item_type: int) -> void:
+	send_dict({"type": "nj_item", "item_type": item_type})
+
+
+func send_nj_item_decline() -> void:
+	send_dict({"type": "nj_item_decline"})
+
+
+func send_nj_revive(piece_id: int) -> void:
+	send_dict({"type": "nj_revive", "piece_id": piece_id})
+
+
+func send_nj_decline_reward() -> void:
+	send_dict({"type": "nj_decline_reward"})
+
+
+func send_nj_rematch() -> void:
+	send_dict({"type": "nj_rematch"})
+
+
 var _was_open: bool = false
 
 

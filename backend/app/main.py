@@ -9,6 +9,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .blackwhite import BWRoom, bw_manager
+from .number_janggi import NJRoom, nj_manager
 from .room import MatchQueue, Room, manager
 
 app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
@@ -16,6 +17,7 @@ app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
 # game_id -> 해당 게임의 방 생성 함수. 목록에 없는 game_id는 오목 방으로 처리된다.
 GAME_ROOM_FACTORIES: dict[str, Callable[[], str]] = {
     "black_white": bw_manager.create_room,
+    "number_janggi": nj_manager.create_room,
 }
 quick_queue = MatchQueue(GAME_ROOM_FACTORIES, default_factory=manager.create_room)
 
@@ -105,6 +107,62 @@ async def _run_bw_message_loop(room: BWRoom, websocket: WebSocket) -> None:
         await bw_manager.disconnect(room.room_id, websocket)
 
 
+async def _run_nj_message_loop(room: NJRoom, websocket: WebSocket) -> None:
+    """숫자장기 전용 메시지 루프 — nj_arrange_*/nj_ready/nj_move/nj_item*/nj_revive 등."""
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "nj_arrange_move":
+                await nj_manager.handle_arrange_move(
+                    room,
+                    websocket,
+                    int(data.get("piece_id", -1)),
+                    int(data.get("col", -1)),
+                    int(data.get("row", -1)),
+                )
+            elif msg_type == "nj_arrange_swap":
+                await nj_manager.handle_arrange_swap(
+                    room,
+                    websocket,
+                    int(data.get("piece_id_a", -1)),
+                    int(data.get("piece_id_b", -1)),
+                )
+            elif msg_type == "nj_arrange_reset":
+                await nj_manager.handle_arrange_reset(room, websocket)
+            elif msg_type == "nj_ready":
+                await nj_manager.handle_ready(room, websocket)
+            elif msg_type == "nj_move":
+                await nj_manager.handle_move(
+                    room,
+                    websocket,
+                    int(data.get("piece_id", -1)),
+                    int(data.get("col", -1)),
+                    int(data.get("row", -1)),
+                )
+            elif msg_type == "nj_item":
+                await nj_manager.handle_item(room, websocket, int(data.get("item_type", -1)))
+            elif msg_type == "nj_item_decline":
+                await nj_manager.handle_item_decline(room, websocket)
+            elif msg_type == "nj_revive":
+                await nj_manager.handle_revive(room, websocket, int(data.get("piece_id", -1)))
+            elif msg_type == "nj_decline_reward":
+                await nj_manager.handle_decline_reward(room, websocket)
+            elif msg_type == "nj_rematch":
+                await nj_manager.handle_rematch(room, websocket)
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            else:
+                await websocket.send_json(
+                    {"type": "error", "message": f"unknown_type:{msg_type}"},
+                )
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await nj_manager.disconnect(room.room_id, websocket)
+
+
 @app.websocket("/ws/quick")
 async def websocket_quick_match(
     websocket: WebSocket,
@@ -153,6 +211,19 @@ async def websocket_quick_match(
         )
         await bw_manager.on_joined(bw_room, websocket)
         await _run_bw_message_loop(bw_room, websocket)
+        return
+
+    if game_id == "number_janggi":
+        nj_room = await nj_manager.connect(room_id, websocket)
+        if nj_room is None:
+            await websocket.send_json({"type": "error", "message": "room_full"})
+            await websocket.close(code=4000)
+            return
+        await websocket.send_json(
+            {"type": "matched", "room_id": room_id, "game_id": game_id},
+        )
+        await nj_manager.on_joined(nj_room, websocket)
+        await _run_nj_message_loop(nj_room, websocket)
         return
 
     room = await manager.connect(room_id, websocket)
