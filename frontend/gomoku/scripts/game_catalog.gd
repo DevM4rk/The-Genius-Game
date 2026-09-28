@@ -65,6 +65,21 @@ const GAMES: Array[Dictionary] = [
 			+ "온라인 전용 게임입니다(랜덤매치).",
 	},
 	{
+		"id": "indian_poker",
+		"name": "인디언 포커",
+		"scene_path": "res://ui/indian_poker_board.tscn",
+		"supports_local": false,
+		"supports_ai": false,
+		"supports_turn_choice": false,
+		"rules_text":
+			"1~10 카드 두 벌(20장)을 섞어 매 라운드 한 장씩 받습니다. 두 사람은 칩 20개씩으로 시작하고 최대 10라운드를 진행합니다.\n\n"
+			+ "내 카드는 보이지 않고, 상대 카드만 보입니다.\n\n"
+			+ "두 사람이 동시에 걸 칩(1개 이상, 가진 칩 이하)을 정합니다. 둘 다 걸면 카드를 공개하고, "
+			+ "숫자가 큰 쪽이 상대가 건 칩만큼 가져옵니다. 숫자가 같으면 칩 변동이 없습니다.\n\n"
+			+ "한 사람의 칩이 0이 되거나 10라운드가 끝나면 칩이 많은 쪽이 승리합니다. 같으면 무승부입니다.\n\n"
+			+ "온라인 전용 게임입니다(랜덤매치).",
+	},
+	{
 		"id": "number_janggi",
 		"name": "숫자장기",
 		"scene_path": "res://ui/number_janggi_board.tscn",

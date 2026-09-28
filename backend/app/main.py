@@ -13,6 +13,7 @@ from .blackwhite import BWRoom, bw_manager
 from .blackwhite2 import BW2Room, bw2_manager
 from .duel import DuelRoom, DuelRoomManager
 from .number_janggi import NJRoom, nj_manager
+from .poker_duel import IndianPokerRules
 from .room import MatchQueue, Room, manager
 
 app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
@@ -20,7 +21,7 @@ app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
 # 공용 1:1 방(duel_*)을 쓰는 게임들. game_id -> 방 관리자.
 DUEL_MANAGERS: dict[str, DuelRoomManager] = {
     rules.game_id: DuelRoomManager(rules)
-    for rules in (BettingRPSRules(),)
+    for rules in (BettingRPSRules(), IndianPokerRules())
 }
 
 # game_id -> 해당 게임의 방 생성 함수. 목록에 없는 game_id는 오목 방으로 처리된다.
