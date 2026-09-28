@@ -97,6 +97,22 @@ const GAMES: Array[Dictionary] = [
 			+ "온라인 전용 게임입니다(랜덤매치).",
 	},
 	{
+		"id": "hap_game",
+		"name": "결! 합!",
+		"scene_path": "res://ui/hap_game_board.tscn",
+		"supports_local": false,
+		"supports_ai": false,
+		"supports_turn_choice": false,
+		"rules_text":
+			"그림 9장이 공개됩니다. 그림마다 도형(●▲■), 도형 색(빨강·파랑·노랑), 배경색(검정·회색·흰색)이 있습니다.\n\n"
+			+ "세 장이 도형, 도형 색, 배경색 각각에서 모두 같거나 모두 다르면 \"합\"입니다.\n\n"
+			+ "합!: 세 장을 골라 부릅니다. 아직 나오지 않은 합이면 +1점, 합이 아니거나 이미 나온 합이면 -1점입니다.\n\n"
+			+ "결!: 더 이상 남은 합이 없다고 생각할 때 부릅니다. 맞으면 +3점이고 게임이 끝납니다. "
+			+ "남은 합이 있으면 -1점입니다.\n\n"
+			+ "두 사람 모두 언제든 부를 수 있고, 먼저 부른 사람부터 판정합니다. 게임이 끝났을 때 점수가 높은 쪽이 승리합니다.\n\n"
+			+ "온라인 전용 게임입니다(랜덤매치).",
+	},
+	{
 		"id": "number_janggi",
 		"name": "숫자장기",
 		"scene_path": "res://ui/number_janggi_board.tscn",
