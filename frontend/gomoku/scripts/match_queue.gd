@@ -65,6 +65,11 @@ func _on_net_message(data: Dictionary) -> void:
 			if t == "bw_state":
 				_ready_for_board = true
 				_try_enter_board()
+		"bw2_joined", "bw2_waiting", "bw2_state", "bw2_opponent_left":
+			GameSession.pending_net_messages.append(data)
+			if t == "bw2_state":
+				_ready_for_board = true
+				_try_enter_board()
 		"nj_joined", "nj_waiting", "nj_state", "nj_opponent_left":
 			# 숫자장기도 game_start가 없다 — 양쪽 입장 후 오는 nj_state가
 			# "준비 완료" 신호다.

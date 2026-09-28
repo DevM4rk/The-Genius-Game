@@ -9,6 +9,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .blackwhite import BWRoom, bw_manager
+from .blackwhite2 import BW2Room, bw2_manager
 from .number_janggi import NJRoom, nj_manager
 from .room import MatchQueue, Room, manager
 
@@ -17,6 +18,7 @@ app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
 # game_id -> 해당 게임의 방 생성 함수. 목록에 없는 game_id는 오목 방으로 처리된다.
 GAME_ROOM_FACTORIES: dict[str, Callable[[], str]] = {
     "black_white": bw_manager.create_room,
+    "black_white2": bw2_manager.create_room,
     "number_janggi": nj_manager.create_room,
 }
 quick_queue = MatchQueue(GAME_ROOM_FACTORIES, default_factory=manager.create_room)
@@ -105,6 +107,33 @@ async def _run_bw_message_loop(room: BWRoom, websocket: WebSocket) -> None:
         pass
     finally:
         await bw_manager.disconnect(room.room_id, websocket)
+
+
+async def _run_bw2_message_loop(room: BW2Room, websocket: WebSocket) -> None:
+    """흑과백2 전용 메시지 루프 — bw2_bid/bw2_rematch."""
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "bw2_bid":
+                try:
+                    amount = int(data.get("amount", -1))
+                except (TypeError, ValueError):
+                    amount = -1
+                await bw2_manager.handle_bid(room, websocket, amount)
+            elif msg_type == "bw2_rematch":
+                await bw2_manager.handle_rematch(room, websocket)
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            else:
+                await websocket.send_json(
+                    {"type": "error", "message": f"unknown_type:{msg_type}"},
+                )
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await bw2_manager.disconnect(room.room_id, websocket)
 
 
 async def _run_nj_message_loop(room: NJRoom, websocket: WebSocket) -> None:
@@ -211,6 +240,19 @@ async def websocket_quick_match(
         )
         await bw_manager.on_joined(bw_room, websocket)
         await _run_bw_message_loop(bw_room, websocket)
+        return
+
+    if game_id == "black_white2":
+        bw2_room = await bw2_manager.connect(room_id, websocket)
+        if bw2_room is None:
+            await websocket.send_json({"type": "error", "message": "room_full"})
+            await websocket.close(code=4000)
+            return
+        await websocket.send_json(
+            {"type": "matched", "room_id": room_id, "game_id": game_id},
+        )
+        await bw2_manager.on_joined(bw2_room, websocket)
+        await _run_bw2_message_loop(bw2_room, websocket)
         return
 
     if game_id == "number_janggi":

@@ -98,6 +98,8 @@ func _rebuild_list() -> void:
 	for child in _list.get_children():
 		child.queue_free()
 	for game in GameCatalog.all():
+		if _mode == Mode.SOLO and not (bool(game.get("supports_local", false)) or bool(game.get("supports_ai", false))):
+			continue
 		var btn := Button.new()
 		btn.text = str(game.get("name", "?"))
 		btn.custom_minimum_size = Vector2(0, 44)

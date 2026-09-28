@@ -57,6 +57,14 @@ func send_bw_rematch() -> void:
 	send_dict({"type": "bw_rematch"})
 
 
+func send_bw2_bid(amount: int) -> void:
+	send_dict({"type": "bw2_bid", "amount": amount})
+
+
+func send_bw2_rematch() -> void:
+	send_dict({"type": "bw2_rematch"})
+
+
 func send_nj_arrange_move(piece_id: int, col: int, row: int) -> void:
 	send_dict({"type": "nj_arrange_move", "piece_id": piece_id, "col": col, "row": row})
 
