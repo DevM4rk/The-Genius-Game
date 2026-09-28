@@ -132,6 +132,24 @@ const GAMES: Array[Dictionary] = [
 			+ "온라인 전용 게임입니다(랜덤매치).",
 	},
 	{
+		"id": "twelve_janggi",
+		"name": "십이장기",
+		"scene_path": "res://ui/twelve_janggi_board.tscn",
+		"supports_local": false,
+		"supports_ai": false,
+		"supports_turn_choice": false,
+		"rules_text":
+			"가로 3칸 · 세로 4칸 판에서 각자 왕(王)·장(將)·상(相)·자(子) 4개로 둡니다. 맨 끝줄이 각자의 진영입니다. "
+			+ "선은 무작위로 정합니다.\n\n"
+			+ "왕: 8방향 1칸 / 장: 앞뒤좌우 1칸 / 상: 대각선 1칸 / 자: 앞으로 1칸.\n"
+			+ "자가 상대 진영에 들어가면 후(侯)가 됩니다. 후는 대각선 뒤를 뺀 6방향으로 1칸 움직입니다.\n\n"
+			+ "상대 말이 있는 칸으로 가면 그 말을 잡아 내 포로로 만듭니다(후는 자로 돌아갑니다). "
+			+ "내 차례에 말을 움직이는 대신 포로 하나를 빈칸에 내려놓을 수 있습니다. 상대 진영에는 내려놓을 수 없습니다.\n\n"
+			+ "상대 왕을 잡거나, 내 왕이 상대 진영에 들어간 뒤 상대 차례를 한 번 버티면 승리합니다. "
+			+ "200수 안에 끝나지 않으면 무승부입니다.\n\n"
+			+ "온라인 전용 게임입니다(랜덤매치).",
+	},
+	{
 		"id": "number_janggi",
 		"name": "숫자장기",
 		"scene_path": "res://ui/number_janggi_board.tscn",
