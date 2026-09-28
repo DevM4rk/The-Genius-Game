@@ -49,6 +49,22 @@ const GAMES: Array[Dictionary] = [
 			+ "온라인 전용 게임입니다(랜덤매치).",
 	},
 	{
+		"id": "betting_rps",
+		"name": "베팅 가위바위보",
+		"scene_path": "res://ui/betting_rps_board.tscn",
+		"supports_local": false,
+		"supports_ai": false,
+		"supports_turn_choice": false,
+		"rules_text":
+			"두 사람이 칩 10개씩 받고 최대 10라운드를 진행합니다.\n\n"
+			+ "매 라운드 두 사람이 동시에 가위·바위·보 중 하나와 걸 칩(1개 이상, 가진 칩 이하)을 냅니다. "
+			+ "둘 다 낼 때까지 상대의 손과 칩은 보이지 않습니다.\n\n"
+			+ "이긴 쪽은 상대가 건 칩만큼 상대에게서 가져옵니다. 비기면 칩 변동이 없습니다. "
+			+ "라운드가 끝나면 두 사람의 손과 칩이 공개됩니다.\n\n"
+			+ "한 사람의 칩이 0이 되거나 10라운드가 끝나면 칩이 많은 쪽이 승리합니다. 같으면 무승부입니다.\n\n"
+			+ "온라인 전용 게임입니다(랜덤매치).",
+	},
+	{
 		"id": "number_janggi",
 		"name": "숫자장기",
 		"scene_path": "res://ui/number_janggi_board.tscn",

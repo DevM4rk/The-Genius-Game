@@ -8,18 +8,27 @@ from typing import Callable
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from .betting_rps import BettingRPSRules
 from .blackwhite import BWRoom, bw_manager
 from .blackwhite2 import BW2Room, bw2_manager
+from .duel import DuelRoom, DuelRoomManager
 from .number_janggi import NJRoom, nj_manager
 from .room import MatchQueue, Room, manager
 
 app = FastAPI(title="The Genius Game - Gomoku", version="0.2.0")
+
+# 공용 1:1 방(duel_*)을 쓰는 게임들. game_id -> 방 관리자.
+DUEL_MANAGERS: dict[str, DuelRoomManager] = {
+    rules.game_id: DuelRoomManager(rules)
+    for rules in (BettingRPSRules(),)
+}
 
 # game_id -> 해당 게임의 방 생성 함수. 목록에 없는 game_id는 오목 방으로 처리된다.
 GAME_ROOM_FACTORIES: dict[str, Callable[[], str]] = {
     "black_white": bw_manager.create_room,
     "black_white2": bw2_manager.create_room,
     "number_janggi": nj_manager.create_room,
+    **{game_id: m.create_room for game_id, m in DUEL_MANAGERS.items()},
 }
 quick_queue = MatchQueue(GAME_ROOM_FACTORIES, default_factory=manager.create_room)
 
@@ -136,6 +145,31 @@ async def _run_bw2_message_loop(room: BW2Room, websocket: WebSocket) -> None:
         await bw2_manager.disconnect(room.room_id, websocket)
 
 
+async def _run_duel_message_loop(
+    duel_manager: DuelRoomManager, room: DuelRoom, websocket: WebSocket
+) -> None:
+    """공용 1:1 방 메시지 루프 — duel_action/duel_rematch."""
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "duel_action":
+                await duel_manager.handle_action(room, websocket, data)
+            elif msg_type == "duel_rematch":
+                await duel_manager.handle_rematch(room, websocket)
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            else:
+                await websocket.send_json(
+                    {"type": "error", "message": f"unknown_type:{msg_type}"},
+                )
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await duel_manager.disconnect(room.room_id, websocket)
+
+
 async def _run_nj_message_loop(room: NJRoom, websocket: WebSocket) -> None:
     """숫자장기 전용 메시지 루프 — nj_arrange_*/nj_ready/nj_move/nj_item*/nj_revive 등."""
     try:
@@ -240,6 +274,20 @@ async def websocket_quick_match(
         )
         await bw_manager.on_joined(bw_room, websocket)
         await _run_bw_message_loop(bw_room, websocket)
+        return
+
+    duel_manager = DUEL_MANAGERS.get(game_id)
+    if duel_manager is not None:
+        duel_room = await duel_manager.connect(room_id, websocket)
+        if duel_room is None:
+            await websocket.send_json({"type": "error", "message": "room_full"})
+            await websocket.close(code=4000)
+            return
+        await websocket.send_json(
+            {"type": "matched", "room_id": room_id, "game_id": game_id},
+        )
+        await duel_manager.on_joined(duel_room, websocket)
+        await _run_duel_message_loop(duel_manager, duel_room, websocket)
         return
 
     if game_id == "black_white2":
