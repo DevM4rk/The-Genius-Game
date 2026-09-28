@@ -80,6 +80,23 @@ const GAMES: Array[Dictionary] = [
 			+ "온라인 전용 게임입니다(랜덤매치).",
 	},
 	{
+		"id": "two_sided_poker",
+		"name": "양면포커",
+		"scene_path": "res://ui/two_sided_poker_board.tscn",
+		"supports_local": false,
+		"supports_ai": false,
+		"supports_turn_choice": false,
+		"rules_text":
+			"카드마다 앞면과 뒷면에 1~10 숫자가 하나씩 적혀 있습니다. 매 라운드 한 장씩 받고, "
+			+ "두 사람은 칩 20개씩으로 시작해 최대 10라운드를 진행합니다.\n\n"
+			+ "카드를 두 사람 사이에 세워 든다고 생각하면 됩니다. 내 카드는 앞면만, 상대 카드는 뒷면만 보입니다. "
+			+ "내 카드 뒷면은 상대만, 상대 카드 앞면은 상대만 압니다.\n\n"
+			+ "두 사람이 동시에 걸 칩(1개 이상, 가진 칩 이하)을 정합니다. 둘 다 걸면 양면을 모두 공개하고, "
+			+ "앞면과 뒷면의 합이 큰 쪽이 상대가 건 칩만큼 가져옵니다. 합이 같으면 칩 변동이 없습니다.\n\n"
+			+ "한 사람의 칩이 0이 되거나 10라운드가 끝나면 칩이 많은 쪽이 승리합니다. 같으면 무승부입니다.\n\n"
+			+ "온라인 전용 게임입니다(랜덤매치).",
+	},
+	{
 		"id": "number_janggi",
 		"name": "숫자장기",
 		"scene_path": "res://ui/number_janggi_board.tscn",

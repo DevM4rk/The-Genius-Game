@@ -131,3 +131,29 @@ class IndianPokerRules(ChipPokerRules):
 
     def visible(self, state: PokerState, idx: int) -> dict[str, Any]:
         return {"opp_card": state.cards[1 - idx]}
+
+
+class TwoSidedPokerRules(ChipPokerRules):
+    """앞·뒤에 숫자가 있는 카드. 카드 세기는 두 면의 합.
+
+    카드를 둘 사이에 세워 든다고 보고, 내 카드는 내 쪽 면(앞면)만, 상대 카드는
+    내 쪽을 향한 면(뒷면)만 보인다. 그래서 각 면은 정확히 한 사람만 안다.
+    """
+
+    game_id = "two_sided_poker"
+
+    def make_deck(self, rng: random.Random) -> list[Any]:
+        fronts = list(range(1, 11)) * 2
+        backs = list(range(1, 11)) * 2
+        rng.shuffle(fronts)
+        rng.shuffle(backs)
+        return [[f, b] for f, b in zip(fronts, backs)]
+
+    def strength(self, card: Any) -> int:
+        return int(card[0]) + int(card[1])
+
+    def visible(self, state: PokerState, idx: int) -> dict[str, Any]:
+        return {
+            "my_front": state.cards[idx][0],
+            "opp_back": state.cards[1 - idx][1],
+        }
